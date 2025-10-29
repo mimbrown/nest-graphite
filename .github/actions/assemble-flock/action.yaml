@@ -28,7 +28,7 @@ inputs:
   patches_repo:
     required: false
     description: "the repo to use for patches"
-    default: join-the-flock/flock-patches
+    default: mimbrown/flutter-graphite-patches
 
 runs:
   using: "composite"
