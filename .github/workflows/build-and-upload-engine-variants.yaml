@@ -40,6 +40,7 @@ jobs:
         uses: ./.github/actions/assemble-flock
         with:
           flutter_ref: ${{ env.FLUTTER_BRANCH }}
+          token: ${{ secrets.REPO_WORKFLOW_PAT }}
     
       - name: web build
         uses: ./.github/actions/build-and-upload-engine
@@ -126,6 +127,7 @@ jobs:
         uses: ./.github/actions/assemble-flock
         with:
           flutter_ref: ${{ env.FLUTTER_BRANCH }}
+          token: ${{ secrets.REPO_WORKFLOW_PAT }}
 
       - name: android build
         uses: ./.github/actions/build-and-upload-engine
@@ -195,6 +197,7 @@ jobs:
         uses: ./.github/actions/assemble-flock
         with:
           flutter_ref: ${{ env.FLUTTER_BRANCH }}
+          token: ${{ secrets.REPO_WORKFLOW_PAT }}
 
       - name: linux build
         uses: ./.github/actions/build-and-upload-engine
@@ -343,6 +346,7 @@ jobs:
         uses: ./.github/actions/assemble-flock
         with:
           flutter_ref: ${{ env.FLUTTER_BRANCH }}
+          token: ${{ secrets.REPO_WORKFLOW_PAT }}
 
       - name: mac build
         uses: ./.github/actions/build-and-upload-engine
@@ -419,6 +423,7 @@ jobs:
         uses: ./.github/actions/assemble-flock
         with:
           flutter_ref: ${{ env.FLUTTER_BRANCH }}
+          token: ${{ secrets.REPO_WORKFLOW_PAT }}
 
       - name: mac build
         uses: ./.github/actions/build-and-upload-engine
@@ -472,6 +477,7 @@ jobs:
         uses: ./.github/actions/assemble-flock
         with:
           flutter_ref: ${{ env.FLUTTER_BRANCH }}
+          token: ${{ secrets.REPO_WORKFLOW_PAT }}
           
       - name: gclient sync macos
         run: |
