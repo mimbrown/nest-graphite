@@ -23,7 +23,7 @@ inputs:
   patches_ref:
     required: true
     description: "the ref of the branch or ref to use for patching flutter"
-    default: main
+    default: master
 
   patches_repo:
     required: false
