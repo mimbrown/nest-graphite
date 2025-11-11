@@ -64,25 +64,31 @@ jobs:
       max-parallel: 4
       matrix:
         include:
-          - name: android debug
+          - name: android debug unopt
             os: macos-latest
-            config_name: ci/android_debug
+            config_name: android_debug_unopt
+
+          - name: android debug unopt arm64
+            os: macos-latest
+            config_name: android_debug_unopt_arm64
 
           - name: android debug arm64
             os: macos-latest
-            config_name: ci/android_debug_arm64
+            config_name: android_debug_arm64
 
           #- name: android debug unopt
           #  os: macos-latest
           #  config_name: ci/android_debug_unopt
 
-          - name: android debug x64
-            os: macos-latest
-            config_name: ci/android_debug_x64
+          # This one appears to be invalid
+          #- name: android debug x64
+          #  os: macos-latest
+          #  config_name: ci/android_debug_x64
 
-          - name: android debug x86
-            os: macos-latest
-            config_name: ci/android_debug_x86
+          # This one appears to be invalid
+          #- name: android debug x86
+          #  os: macos-latest
+          #  config_name: ci/android_debug_x86
 
           #- name: android embedder debug unopt
           #  os: macos-latest
@@ -306,25 +312,25 @@ jobs:
           #  os: macos-latest
           #  config_name: ci/host_profile_gen_snapshot
 #
-          #- name: mac host release framework
-          #  os: macos-latest
-          #  config_name: ci/host_release_framework
-#
-          #- name: mac host release gen snapshot
-          #  os: macos-latest
-          #  config_name: ci/host_release_gen_snapshot
-#
+          - name: mac host release framework
+            os: macos-latest
+            config_name: ci/host_release_framework
+
+          - name: mac host release gen snapshot
+            os: macos-latest
+            config_name: ci/host_release_gen_snapshot
+
           #- name: mac host profile
           #  os: macos-latest
           #  config_name: ci/host_profile
 #
-          #- name: mac host release
-          #  os: macos-latest
-          #  config_name: ci/host_release
-
-          - name: mac host release arm64
+          - name: mac host release
             os: macos-latest
-            config_name: ci/host_release_arm64
+            config_name: ci/host_release
+
+          - name: mac host release arm64 licenses
+            os: macos-latest
+            config_name: ci/host_release_arm64_licenses
 
           #- name: mac host debug
           #  config_name: ci/host_debug
