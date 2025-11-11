@@ -89,7 +89,7 @@ runs:
       run: |
         echo "Running et config: ${{ inputs.config_name }}"
         cd flock/engine/src
-        ./flutter/bin/et build --config ${{ inputs.config_name }}
+        ./flutter/bin/et build --config ${{ inputs.config_name }} --gn-args="--no-prebuilt-dart-sdk"
 
     - name: Copy Zip Archives
       shell: bash
