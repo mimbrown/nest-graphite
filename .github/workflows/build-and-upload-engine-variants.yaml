@@ -14,42 +14,43 @@ env:
 
 jobs:
 
-  build-engine-web:
-    # We'll run on whatever OS the matrix entry specifies.
-    runs-on: ${{ matrix.os }}
-    defaults:
-      run:
-        shell: bash
-
-    strategy:
-      max-parallel: 4
-      matrix:
-        include:
-
-          - name: linux wasm release (web)
-            config_name: wasm_release
-            os: ubuntu-latest
-
-    steps:
-      - name: Check out the repository
-        uses: actions/checkout@v4
-        with:
-          path: ''
-
-      - name: assemble flock
-        uses: ./.github/actions/assemble-flock
-        with:
-          flutter_ref: ${{ env.FLUTTER_BRANCH }}
-          token: ${{ secrets.REPO_WORKFLOW_PAT }}
-    
-      - name: web build
-        uses: ./.github/actions/build-and-upload-engine
-        with:
-          gcp_credentials: ${{ secrets.GOOGLE_STORAGE_BUCKET_SECRET }}
-          gcp_bucket: flutter-graphite-builds
-          gclient: slim-linux-web
-          config_name: ${{ matrix.config_name }}
-          engine_version: ${{ github.sha }}
+  #We don't need the web engine
+  #build-engine-web:
+  #  # We'll run on whatever OS the matrix entry specifies.
+  #  runs-on: ${{ matrix.os }}
+  #  defaults:
+  #    run:
+  #      shell: bash
+#
+  #  strategy:
+  #    max-parallel: 4
+  #    matrix:
+  #      include:
+#
+  #        - name: linux wasm release (web)
+  #          config_name: wasm_release
+  #          os: ubuntu-latest
+#
+  #  steps:
+  #    - name: Check out the repository
+  #      uses: actions/checkout@v4
+  #      with:
+  #        path: ''
+#
+  #    - name: assemble flock
+  #      uses: ./.github/actions/assemble-flock
+  #      with:
+  #        flutter_ref: ${{ env.FLUTTER_BRANCH }}
+  #        token: ${{ secrets.REPO_WORKFLOW_PAT }}
+  #  
+  #    - name: web build
+  #      uses: ./.github/actions/build-and-upload-engine
+  #      with:
+  #        gcp_credentials: ${{ secrets.GOOGLE_STORAGE_BUCKET_SECRET }}
+  #        gcp_bucket: flutter-graphite-builds
+  #        gclient: slim-linux-web
+  #        config_name: ${{ matrix.config_name }}
+  #        engine_version: ${{ github.sha }}
 
 
   build-engine-android:
@@ -64,59 +65,59 @@ jobs:
       matrix:
         include:
           - name: android debug
-            os: ubuntu-latest
+            os: macos-latest
             config_name: ci/android_debug
 
           - name: android debug arm64
-            os: ubuntu-latest
+            os: macos-latest
             config_name: ci/android_debug_arm64
 
           - name: android debug unopt
-            os: ubuntu-latest
+            os: macos-latest
             config_name: ci/android_debug_unopt
 
           - name: android debug x64
-            os: ubuntu-latest
+            os: macos-latest
             config_name: ci/android_debug_x64
 
           - name: android debug x86
-            os: ubuntu-latest
+            os: macos-latest
             config_name: ci/android_debug_x86
 
           - name: android embedder debug unopt
-            os: ubuntu-latest
+            os: macos-latest
             config_name: ci/android_embedder_debug_unopt
 
           - name: android emulator debug x64
-            os: ubuntu-latest
+            os: macos-latest
             config_name: ci/android_emulator_debug_x64
 
           - name: android emulator debug x86
-            os: ubuntu-latest
+            os: macos-latest
             config_name: ci/android_emulator_debug_x86
 
           - name: android profile
-            os: ubuntu-latest
+            os: macos-latest
             config_name: ci/android_profile
 
           - name: android profile arm64
-            os: ubuntu-latest
+            os: macos-latest
             config_name: ci/android_profile_arm64
 
           - name: android profile x64
-            os: ubuntu-latest
+            os: macos-latest
             config_name: ci/android_profile_x64
 
           - name: android release
-            os: ubuntu-latest
+            os: macos-latest
             config_name:  ci/android_release
 
           - name: android release arm64
-            os: ubuntu-latest
+            os: macos-latest
             config_name: ci/android_release_arm64
 
           - name: android release x64
-            os: ubuntu-latest
+            os: macos-latest
             config_name: ci/android_release_x64
 
     steps:
@@ -139,74 +140,75 @@ jobs:
           engine_version: ${{ github.sha }}
 
 
-  build-engine-linux:
-    # We'll run on whatever OS the matrix entry specifies.
-    runs-on: ${{ matrix.os }}
-    defaults:
-      run:
-        shell: bash
-
-
-    strategy:
-      max-parallel: 4
-      matrix:
-        include:
-
-          - name: linux host debug unopt
-            os: ubuntu-latest
-            config_name: ci/host_debug_unopt
-
-          - name: linux debug arm64
-            os: ubuntu-latest
-            config_name: ci/linux_debug_arm64
-
-          - name: linux profile arm64
-            os: ubuntu-latest
-            config_name: ci/linux_profile_arm64
-          - name: linux release arm64
-            os: ubuntu-latest
-            config_name: ci/linux_release_arm64
-
-          - name: linux host release
-            os: ubuntu-latest
-            config_name: ci/host_release
-
-          - name: linux host debug
-            config_name: ci/host_debug
-            os: ubuntu-latest
-
-
-          - name: linux host release
-            os: ubuntu-latest
-            config_name: ci/host_release_desktop
-
-          - name: linux host debug
-            config_name: ci/host_debug_desktop
-            os: ubuntu-latest
-
-          - name: linux host debug clang tidy
-            os: ubuntu-latest
-            config_name: ci/host_debug_clang_tidy
-
-    steps:
-
-      - name: checkout out the repository
-        uses: actions/checkout@v4
-
-      - name: assemble flock
-        uses: ./.github/actions/assemble-flock
-        with:
-          flutter_ref: ${{ env.FLUTTER_BRANCH }}
-          token: ${{ secrets.REPO_WORKFLOW_PAT }}
-
-      - name: linux build
-        uses: ./.github/actions/build-and-upload-engine
-        with:
-          gcp_credentials: ${{ secrets.GOOGLE_STORAGE_BUCKET_SECRET }}
-          gcp_bucket: flutter-graphite-builds
-          gclient: slim-linux-desktop
-          config_name: ${{ matrix.config_name }}
-          engine_version: ${{ github.sha }}
+  #We don't need this for linux.
+  #build-engine-linux:
+  #  # We'll run on whatever OS the matrix entry specifies.
+  #  runs-on: ${{ matrix.os }}
+  #  defaults:
+  #    run:
+  #      shell: bash
+#
+#
+  #  strategy:
+  #    max-parallel: 4
+  #    matrix:
+  #      include:
+#
+  #        - name: linux host debug unopt
+  #          os: ubuntu-latest
+  #          config_name: ci/host_debug_unopt
+#
+  #        - name: linux debug arm64
+  #          os: ubuntu-latest
+  #          config_name: ci/linux_debug_arm64
+#
+  #        - name: linux profile arm64
+  #          os: ubuntu-latest
+  #          config_name: ci/linux_profile_arm64
+  #        - name: linux release arm64
+  #          os: ubuntu-latest
+  #          config_name: ci/linux_release_arm64
+#
+  #        - name: linux host release
+  #          os: ubuntu-latest
+  #          config_name: ci/host_release
+#
+  #        - name: linux host debug
+  #          config_name: ci/host_debug
+  #          os: ubuntu-latest
+#
+#
+  #        - name: linux host release
+  #          os: ubuntu-latest
+  #          config_name: ci/host_release_desktop
+#
+  #        - name: linux host debug
+  #          config_name: ci/host_debug_desktop
+  #          os: ubuntu-latest
+#
+  #        - name: linux host debug clang tidy
+  #          os: ubuntu-latest
+  #          config_name: ci/host_debug_clang_tidy
+#
+  #  steps:
+#
+  #    - name: checkout out the repository
+  #      uses: actions/checkout@v4
+#
+  #    - name: assemble flock
+  #      uses: ./.github/actions/assemble-flock
+  #      with:
+  #        flutter_ref: ${{ env.FLUTTER_BRANCH }}
+  #        token: ${{ secrets.REPO_WORKFLOW_PAT }}
+#
+  #    - name: linux build
+  #      uses: ./.github/actions/build-and-upload-engine
+  #      with:
+  #        gcp_credentials: ${{ secrets.GOOGLE_STORAGE_BUCKET_SECRET }}
+  #        gcp_bucket: flutter-graphite-builds
+  #        gclient: slim-linux-desktop
+  #        config_name: ${{ matrix.config_name }}
+  #        engine_version: ${{ github.sha }}
           
 
       # ------------------------- TESTS BUILDS -------------------------
@@ -319,6 +321,10 @@ jobs:
           - name: mac host release
             os: macos-latest
             config_name: ci/host_release
+
+          - name: mac host release arm64
+            os: macos-latest
+            config_name: ci/host_release_arm64
 
           - name: mac host debug
             config_name: ci/host_debug
@@ -448,8 +454,14 @@ jobs:
         with:
           xcode-version: '16.2'
 
-      - name: 'Set up Cloud SDK'
-        uses: 'google-github-actions/setup-gcloud@v2'
+      #- name: Authenticate to Google Cloud
+      #  uses: google-github-actions/auth@v2
+      #  with:
+      #    workload_identity_provider: 'projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/POOL_ID/providers/PROVIDER_ID'
+      #    service_account: 'SERVICE_ACCOUNT_EMAIL'
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
         with:
           version: '>= 363.0.0'
 

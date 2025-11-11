@@ -27,9 +27,16 @@ inputs:
 
 runs:
   using: "composite"
-  steps:
-    - name: 'Set up Cloud SDK'
-      uses: 'google-github-actions/setup-gcloud@v2'
+  steps: 
+
+    #- name: Authenticate to Google Cloud
+    #  uses: google-github-actions/auth@v2
+    #  with:
+    #    workload_identity_provider: 'projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/POOL_ID/providers/PROVIDER_ID'
+    #    service_account: 'SERVICE_ACCOUNT_EMAIL'
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
       with:
         version: '>= 363.0.0'
 
@@ -89,7 +96,7 @@ runs:
       run: |
         echo "Running et config: ${{ inputs.config_name }}"
         cd flock/engine/src
-        ./flutter/bin/et build --config ${{ inputs.config_name }} --gn-args="--no-prebuilt-dart-sdk"
+        ./flutter/bin/et build --config ${{ inputs.config_name }}
 
     - name: Copy Zip Archives
       shell: bash
