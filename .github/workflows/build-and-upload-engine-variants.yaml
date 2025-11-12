@@ -65,7 +65,7 @@ jobs:
         include:
           - name: android debug unopt
             os: macos-latest
-            config_name: ci/android_debug_unopt
+            config_name: android_debug_unopt
 
           - name: android debug
             os: macos-latest
@@ -73,7 +73,7 @@ jobs:
 
           - name: android debug unopt arm64
             os: macos-latest
-            config_name: ci/android_debug_unopt_arm64
+            config_name: android_debug_unopt_arm64
 
           - name: android debug arm64
             os: macos-latest
