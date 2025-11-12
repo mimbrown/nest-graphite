@@ -10,7 +10,7 @@ env:
   DEPOT_TOOLS_WIN_TOOLCHAIN: 0
   FLOCK_REPO: ${{ vars.FLOCK_REPO }}
   FLOCK_BRANCH: ${{ github.ref }}
-  FLUTTER_BRANCH: stable
+  FLUTTER_BRANCH: master
 
 jobs:
 
