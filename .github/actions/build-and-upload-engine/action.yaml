@@ -104,21 +104,21 @@ runs:
           echo "Running et stamp"
           cd flock/engine/src
           ./flutter/bin/et stamp
-          gcloud storage cp out/engine_stamp.json gs://flutter-graphite-builds/flutter_infra_release/flutter/engine/${{ inputs.engine_version }}/
+          gcloud storage cp out/engine_stamp.json gs://flutter-graphite-builds/flutter_infra_release/flutter/${{ inputs.engine_version }}/
 
     - name: Copy Zip Archives
       shell: bash
       if: ${{ hashFiles(format('flock/engine/src/out/{0}/zip_archives/**', inputs.config_name))!= ''  && contains(inputs.config_name, 'test') == false && inputs.gcp_bucket != ''}}
       run: |
         cd flock/engine/src
-        echo "copying output to /build_outputs/flutter/engine/<engine-revision>/<platform>/<artifact-name>"
-        gcloud storage cp --recursive out/${{ inputs.config_name }}/zip_archives/* gs://${{inputs.gcp_bucket}}/flutter_infra_release/flutter/engine/${{ inputs.engine_version }}/
+        echo "copying output to /build_outputs/flutter/<engine-revision>/<platform>/<artifact-name>"
+        gcloud storage cp --recursive out/${{ inputs.config_name }}/zip_archives/* gs://${{inputs.gcp_bucket}}/flutter_infra_release/flutter/${{ inputs.engine_version }}/
 
     - name: Copy Engine Outputs
       shell: bash
       if: ${{ hashFiles(format('flock/engine/src/out/{0}/zip_archives/**', inputs.config_name)) == '' && contains(inputs.config_name, 'test') == false && inputs.gcp_bucket != '' }}
       run: |
         cd flock/engine/src
-        echo "copying output to /build_outputs/flutter/engine/<engine-revision>/<platform>/<artifact-name>"
+        echo "copying output to /build_outputs/flutter/<engine-revision>/<platform>/<artifact-name>"
         tar c out/${{ inputs.config_name }} | gzip > out/${{ inputs.config_name }}.tar.gz
-        gcloud storage cp --recursive out/${{ inputs.config_name }}.tar.gz gs://${{inputs.gcp_bucket}}/flutter_infra_release/flutter/engine/${{ inputs.engine_version }}/${{ inputs.config_name }}.tar.gz
+        gcloud storage cp --recursive out/${{ inputs.config_name }}.tar.gz gs://${{inputs.gcp_bucket}}/flutter_infra_release/flutter/${{ inputs.engine_version }}/${{ inputs.config_name }}.tar.gz
