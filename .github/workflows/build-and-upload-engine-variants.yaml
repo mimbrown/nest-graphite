@@ -65,24 +65,23 @@ jobs:
         include:
           - name: android debug unopt
             os: macos-latest
-            config_name: android_debug_unopt
+            config_name: ci/android_debug_unopt
+
+          - name: android debug
+            os: macos-latest
+            config_name: ci/android_debug
 
           - name: android debug unopt arm64
             os: macos-latest
-            config_name: android_debug_unopt_arm64
+            config_name: ci/android_debug_unopt_arm64
 
           - name: android debug arm64
             os: macos-latest
-            config_name: android_debug_arm64
+            config_name: ci/android_debug_arm64
 
-          #- name: android debug unopt
-          #  os: macos-latest
-          #  config_name: ci/android_debug_unopt
-
-          # This one appears to be invalid
-          #- name: android debug x64
-          #  os: macos-latest
-          #  config_name: ci/android_debug_x64
+          - name: android debug x64
+            os: macos-latest
+            config_name: ci/android_debug_x64
 
           # This one appears to be invalid
           #- name: android debug x86

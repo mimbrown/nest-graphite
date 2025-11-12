@@ -97,6 +97,14 @@ runs:
         echo "Running et config: ${{ inputs.config_name }}"
         cd flock/engine/src
         ./flutter/bin/et build --config ${{ inputs.config_name }}
+    
+    - name: Make an Engine Stamp
+      shell: bash
+      run: |
+          echo "Running et stamp"
+          cd flock/engine/src
+          ./flutter/bin/et stamp
+          gcloud storage cp out/engine_stamp.json gs://flutter-graphite-builds/flutter_infra_release/flutter/engine/${{ inputs.engine_version }}/
 
     - name: Copy Zip Archives
       shell: bash
