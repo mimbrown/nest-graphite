@@ -10,47 +10,46 @@ env:
   DEPOT_TOOLS_WIN_TOOLCHAIN: 0
   FLOCK_REPO: ${{ vars.FLOCK_REPO }}
   FLOCK_BRANCH: ${{ github.ref }}
-  FLUTTER_BRANCH: master
+  FLUTTER_BRANCH: stable
 
 jobs:
 
-  #We don't need the web engine
-  #build-engine-web:
-  #  # We'll run on whatever OS the matrix entry specifies.
-  #  runs-on: ${{ matrix.os }}
-  #  defaults:
-  #    run:
-  #      shell: bash
-#
-  #  strategy:
-  #    max-parallel: 4
-  #    matrix:
-  #      include:
-#
-  #        - name: linux wasm release (web)
-  #          config_name: wasm_release
-  #          os: ubuntu-latest
-#
-  #  steps:
-  #    - name: Check out the repository
-  #      uses: actions/checkout@v4
-  #      with:
-  #        path: ''
-#
-  #    - name: assemble flock
-  #      uses: ./.github/actions/assemble-flock
-  #      with:
-  #        flutter_ref: ${{ env.FLUTTER_BRANCH }}
-  #        token: ${{ secrets.REPO_WORKFLOW_PAT }}
-  #  
-  #    - name: web build
-  #      uses: ./.github/actions/build-and-upload-engine
-  #      with:
-  #        gcp_credentials: ${{ secrets.GOOGLE_STORAGE_BUCKET_SECRET }}
-  #        gcp_bucket: flutter-graphite-builds
-  #        gclient: slim-linux-web
-  #        config_name: ${{ matrix.config_name }}
-  #        engine_version: ${{ github.sha }}
+  build-engine-web:
+    # We'll run on whatever OS the matrix entry specifies.
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+
+    strategy:
+      max-parallel: 4
+      matrix:
+        include:
+
+          - name: linux wasm release (web)
+            config_name: wasm_release
+            os: ubuntu-latest
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+        with:
+          path: ''
+
+      - name: assemble flock
+        uses: ./.github/actions/assemble-flock
+        with:
+          flutter_ref: ${{ env.FLUTTER_BRANCH }}
+          token: ${{ secrets.REPO_WORKFLOW_PAT }}
+
+      - name: web build
+        uses: ./.github/actions/build-and-upload-engine
+        with:
+          gcp_credentials: ${{ secrets.GOOGLE_STORAGE_BUCKET_SECRET }}
+          gcp_bucket: flutter-graphite-builds
+          gclient: slim-linux-web
+          config_name: ${{ matrix.config_name }}
+          engine_version: ${{ github.sha }}
 
 
   build-engine-android:
