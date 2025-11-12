@@ -391,41 +391,41 @@ jobs:
             config_name: ci/ios_debug_sim
             os: macos-latest
 
-          #- name: ios debug sim arm64
-          #  config_name: ci/ios_debug_sim_arm64
-          #  os: macos-latest
-#
-          #- name: ios profile
-          #  config_name: ci/ios_profile
-          #  os: macos-latest
+          - name: ios debug sim arm64
+            config_name: ci/ios_debug_sim_arm64
+            os: macos-latest
+
+          - name: ios profile
+            config_name: ci/ios_profile
+            os: macos-latest
 
           - name: ios release
             config_name: ci/ios_release
             os: macos-latest
 
-          #- name: ios debug extension safe
-          #  config_name: ci/ios_debug_extension_safe
-          #  os: macos-latest
-#
-          #- name: ios debug sim arm64 extension safe
-          #  config_name: ci/ios_debug_sim_arm64_extension_safe
-          #  os: macos-latest
-#
-          #- name: ios debug sim extension safe
-          #  config_name: ci/ios_debug_sim_extension_safe
-          #  os: macos-latest
-#
-          #- name: ios debug unopt sim arm64 extension safe
-          #  config_name: ci/ios_debug_unopt_sim_arm64_extension_safe
-          #  os: macos-latest
-#
-          #- name: ios profile extension safe
-          #  config_name: ci/ios_profile_extension_safe
-          #  os: macos-latest
-#
-          #- name: ios release extension safe
-          #  config_name: ci/ios_release_extension_safe
-          #  os: macos-latest
+          - name: ios debug extension safe
+            config_name: ci/ios_debug_extension_safe
+            os: macos-latest
+
+          - name: ios debug sim arm64 extension safe
+            config_name: ci/ios_debug_sim_arm64_extension_safe
+            os: macos-latest
+
+          - name: ios debug sim extension safe
+            config_name: ci/ios_debug_sim_extension_safe
+            os: macos-latest
+
+          - name: ios debug unopt sim arm64 extension safe
+            config_name: ci/ios_debug_unopt_sim_arm64_extension_safe
+            os: macos-latest
+
+          - name: ios profile extension safe
+            config_name: ci/ios_profile_extension_safe
+            os: macos-latest
+
+          - name: ios release extension safe
+            config_name: ci/ios_release_extension_safe
+            os: macos-latest
     steps:
 
       - name: Check out the repository

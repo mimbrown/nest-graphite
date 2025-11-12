@@ -33,7 +33,7 @@ permissions:
 jobs:
   # This job runs for "master", "beta", and "stable" Flock branches.
   rebase-flock-on-flutter:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
 
     strategy:
       fail-fast: false
