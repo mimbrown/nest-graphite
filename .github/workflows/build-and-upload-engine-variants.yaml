@@ -63,13 +63,66 @@ jobs:
       max-parallel: 4
       matrix:
         include:
+
+          # ubuntu configs
+
+          - name: android debug
+            os: ubuntu-latest
+            config_name: ci/android_debug
+
+          - name: android debug unopt
+            os: ubuntu-latest
+            config_name: ci/android_debug_unopt
+
+          - name: android debug arm64
+            os: ubuntu-latest
+            config_name: ci/android_debug_arm64
+
+          - name: android debug x64
+            os: ubuntu-latest
+            config_name: ci/android_debug_x64
+
+          - name: android debug x86
+            os: ubuntu-latest
+            config_name: ci/android_debug_x86
+
+          - name: android embedder debug unopt
+            os: ubuntu-latest
+            config_name: ci/android_embedder_debug_unopt
+
+          - name: android emulator debug x64
+            os: ubuntu-latest
+            config_name: ci/android_emulator_debug_x64
+
+          - name: android profile
+            os: ubuntu-latest
+            config_name: ci/android_profile
+
+          - name: android profile arm64
+            os: ubuntu-latest
+            config_name: ci/android_profile_arm64
+
+          - name: android profile x64
+            os: ubuntu-latest
+            config_name: ci/android_profile_x64
+
+          - name: android release
+            os: ubuntu-latest
+            config_name:  ci/android_release
+
+          - name: android release arm64
+            os: ubuntu-latest
+            config_name: ci/android_release_arm64
+
+          - name: android release x64
+            os: ubuntu-latest
+            config_name: ci/android_release_x64
+
+          # macOS configs
+
           - name: android debug unopt
             os: macos-latest
             config_name: android_debug_unopt
-
-          - name: android debug
-            os: macos-latest
-            config_name: android_debug
 
           - name: android debug unopt arm64
             os: macos-latest
@@ -78,10 +131,6 @@ jobs:
           - name: android debug arm64
             os: macos-latest
             config_name: android_debug_arm64
-
-          - name: android debug x64
-            os: macos-latest
-            config_name: android_debug_x64
 
           # This one appears to be invalid
           #- name: android debug x86
