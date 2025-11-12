@@ -69,7 +69,7 @@ jobs:
 
           - name: android debug
             os: macos-latest
-            config_name: ci/android_debug
+            config_name: android_debug
 
           - name: android debug unopt arm64
             os: macos-latest
