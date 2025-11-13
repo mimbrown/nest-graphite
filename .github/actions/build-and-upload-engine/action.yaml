@@ -106,15 +106,15 @@ runs:
           ./flutter/bin/et stamp
           gcloud storage cp out/engine_stamp.json gs://flutter-graphite-builds/flutter_infra_release/flutter/${{ inputs.engine_version }}/
 
-    #Useful for debugging why copy didn't work
-    - name: Check artifact output
-      shell: bash
-      run: |
-        cd flock/engine/src
-        ls -lh out/
-        ls -lh out/ci
-        ls -lh out/${{ inputs.config_name }}
-        ls -lh out/${{ inputs.config_name }}/zip_archives
+    #Causes the build to crash, but can be useful for debugging
+    #- name: Check artifact output
+    #  shell: bash
+    #  run: |
+    #    cd flock/engine/src
+    #    ls -lh out/
+    #    ls -lh out/ci
+    #    ls -lh out/${{ inputs.config_name }}
+    #    ls -lh out/${{ inputs.config_name }}/zip_archives
 
     - name: Copy Zip Archives
       shell: bash

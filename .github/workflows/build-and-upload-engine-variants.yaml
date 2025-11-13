@@ -34,9 +34,16 @@ jobs:
             config_name: wasm_release
             os: ubuntu-latest
 
-          - name: linux ci wasm release (web)
-            config_name: ci/wasm_release
-            os: ubuntu-latest
+          #Error for ci/wasm_release:
+          #copying output to /build_outputs/flutter/<engine-revision>/<platform>/<artifact-name>
+          #/home/runner/work/_temp/fe7309dc-da91-4034-9c33-5d1b9f653e9b.sh: line 3: out/ci/wasm_release.tar.gz: No such file or directory
+          #tar: out/ci/wasm_release: Cannot stat: No such file or directory
+          #tar: -: Cannot write: Broken pipe
+          #tar: Error is not recoverable: exiting now
+          #Error: Process completed with exit code 1.
+          #- name: linux ci wasm release (web)
+          #  config_name: ci/wasm_release
+          #  os: ubuntu-latest
 
     steps:
       - name: Check out the repository
