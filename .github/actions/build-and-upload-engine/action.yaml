@@ -108,7 +108,9 @@ runs:
 
     #Useful for debugging why copy didn't work
     - name: Check artifact output
+      shell: bash
       run: |
+        cd flock/engine/src
         ls -lh out/
         ls -lh out/ci
         ls -lh out/${{ inputs.config_name }}
