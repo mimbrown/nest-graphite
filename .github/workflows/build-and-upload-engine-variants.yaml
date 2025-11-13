@@ -102,17 +102,17 @@ jobs:
             os: ubuntu-latest
             config_name: ci/android_emulator_debug_x64
 
-          #- name: android profile
-          #  os: ubuntu-latest
-          #  config_name: ci/android_profile
-#
-          #- name: android profile arm64
-          #  os: ubuntu-latest
-          #  config_name: ci/android_profile_arm64
-#
-          #- name: android profile x64
-          #  os: ubuntu-latest
-          #  config_name: ci/android_profile_x64
+          - name: android profile
+            os: ubuntu-latest
+            config_name: ci/android_profile
+
+          - name: android profile arm64
+            os: ubuntu-latest
+            config_name: ci/android_profile_arm64
+
+          - name: android profile x64
+            os: ubuntu-latest
+            config_name: ci/android_profile_x64
 
           - name: android release
             os: ubuntu-latest
@@ -140,17 +140,17 @@ jobs:
             os: macos-latest
             config_name: android_debug_unopt_arm64
 
-          #- name: android profile
-          #  os: macos-latest
-          #  config_name: ci/android_profile
-#
-          #- name: android profile arm64
-          #  os: macos-latest
-          #  config_name: ci/android_profile_arm64
-#
-          #- name: android profile x64
-          #  os: macos-latest
-          #  config_name: ci/android_profile_x64
+          - name: android profile
+            os: macos-latest
+            config_name: ci/android_profile
+
+          - name: android profile arm64
+            os: macos-latest
+            config_name: ci/android_profile_arm64
+
+          - name: android profile x64
+            os: macos-latest
+            config_name: ci/android_profile_x64
 
           - name: android release
             os: macos-latest
@@ -202,9 +202,9 @@ jobs:
             os: ubuntu-latest
             config_name: ci/linux_debug_arm64
 
-          #- name: linux profile arm64
-          #  os: ubuntu-latest
-          #  config_name: ci/linux_profile_arm64
+          - name: linux profile arm64
+            os: ubuntu-latest
+            config_name: ci/linux_profile_arm64
             
           - name: linux release arm64
             os: ubuntu-latest
@@ -305,19 +305,19 @@ jobs:
           - name: mac debug gen snapshot arm64
             os: macos-latest
             config_name: ci/mac_debug_gen_snapshot_arm64
-#
-          #- name: mac profile arm64
-          #  os: macos-latest
-          #  config_name: ci/mac_profile_arm64
-#
-          #- name: mac profile frmaoek arm64
-          #  os: macos-latest
-          #  config_name: ci/mac_profile_framework_arm64
-#
-          #- name: mac profile gen snapshot arm64
-          #  os: macos-latest
-          #  config_name: ci/mac_profile_gen_snapshot_arm64
-#
+
+          - name: mac profile arm64
+            os: macos-latest
+            config_name: ci/mac_profile_arm64
+
+          - name: mac profile framework arm64
+            os: macos-latest
+            config_name: ci/mac_profile_framework_arm64
+
+          - name: mac profile gen snapshot arm64
+            os: macos-latest
+            config_name: ci/mac_profile_gen_snapshot_arm64
+
           - name: mac release arm64
             os: macos-latest
             config_name: ci/mac_release_arm64
@@ -350,18 +350,18 @@ jobs:
             os: macos-latest
             config_name: ci/host_debug_unopt_arm64
 
-          #- name: mac host profile
-          #  os: macos-latest
-          #  config_name: ci/host_profile
+          - name: mac host profile
+            os: macos-latest
+            config_name: ci/host_profile
 
-          #- name: mac host profile framework
-          #  os: macos-latest
-          #  config_name: ci/host_profile_framework
-#
-          #- name: mac host profile gen snapshot
-          #  os: macos-latest
-          #  config_name: ci/host_profile_gen_snapshot
-#
+          - name: mac host profile framework
+            os: macos-latest
+            config_name: ci/host_profile_framework
+
+          - name: mac host profile gen snapshot
+            os: macos-latest
+            config_name: ci/host_profile_gen_snapshot
+
           - name: mac host release
             os: macos-latest
             config_name: ci/host_release
@@ -377,14 +377,6 @@ jobs:
           - name: mac host release gen snapshot
             os: macos-latest
             config_name: ci/host_release_gen_snapshot
-
-          #- name: mac host profile
-          #  os: macos-latest
-          #  config_name: ci/host_profile
-#
-          #- name: mac debug framework
-          #  config_name: ci/host_debug_framework
-          #  os: macos-latest
 
     steps:
    

@@ -106,6 +106,14 @@ runs:
           ./flutter/bin/et stamp
           gcloud storage cp out/engine_stamp.json gs://flutter-graphite-builds/flutter_infra_release/flutter/${{ inputs.engine_version }}/
 
+    #Useful for debugging why copy didn't work
+    - name: Check artifact output
+      run: |
+        ls -lh out/
+        ls -lh out/ci
+        ls -lh out/${{ inputs.config_name }}
+        ls -lh out/${{ inputs.config_name }}/zip_archives
+
     - name: Copy Zip Archives
       shell: bash
       if: ${{ hashFiles(format('flock/engine/src/out/{0}/zip_archives/**', inputs.config_name))!= ''  && contains(inputs.config_name, 'test') == false && inputs.gcp_bucket != ''}}
