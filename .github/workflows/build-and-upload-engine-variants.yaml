@@ -410,172 +410,143 @@ jobs:
           config_name: ${{ matrix.config_name }}
           engine_version: ${{ github.sha }}
 
-    build-macos-release:
-    needs: build-engine-mac
-    runs-on: macos-latest
-    defaults:
-      run:
-        shell: bash
-
-    steps:
-
-      - name: Set up Xcode version
-        uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: '16.4'
-
-      #- name: Authenticate to Google Cloud
-      #  uses: google-github-actions/auth@v2
-      #  with:
-      #    workload_identity_provider: 'projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/POOL_ID/providers/PROVIDER_ID'
-      #    service_account: 'SERVICE_ACCOUNT_EMAIL'
-
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-        with:
-          version: '>= 363.0.0'
-
-      - name: Setup gcloud
-        env:
-          GCP_CREDENTIALS: ${{ secrets.GOOGLE_STORAGE_BUCKET_SECRET }}
-        run: |
-          echo "$GCP_CREDENTIALS"  | base64 -d  > "$HOME"/gcloud.json
-          gcloud auth activate-service-account --key-file="$HOME"/gcloud.json
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-
-      - name: Set up depot_tools / gclient
-        run: |
-          git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git $HOME/depot_tools
-          # Append depot_tools to the PATH for subsequent steps
-          echo "$HOME/depot_tools" >> $GITHUB_PATH
-
-      - name: Check out the repository
-        uses: actions/checkout@v4
-
-      - name: assemble flock
-        uses: ./.github/actions/assemble-flock
-        with:
-          flutter_ref: ${{ env.FLUTTER_BRANCH }}
-          token: ${{ secrets.REPO_WORKFLOW_PAT }}
-          
-      - name: gclient sync macos
-        run: |
-          # Use custom gclient to trim size
-          cd flock
-          cp engine/scripts/slim-mac.gclient .gclient
-          gclient sync -D
-
-      - name: build macos release
-        run: |
-
-          cd flock/engine/src
-          
-          gcloud storage cp --recursive 'gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/ci/mac_debug_framework_arm64.tar.gz' .
-          tar -xzf mac_debug_framework_arm64.tar.gz
-          rm mac_debug_framework_arm64.tar.gz
-
-          gcloud storage cp --recursive 'gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/ci/host_debug_framework.tar.gz' .
-          tar -xzf host_debug_framework.tar.gz
-          rm  host_debug_framework.tar.gz
-          
-          gcloud storage cp --recursive 'gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/ci/mac_profile_framework_arm64.tar.gz' .
-          tar -xzf mac_profile_framework_arm64.tar.gz
-          rm mac_profile_framework_arm64.tar.gz
-
-          gcloud storage cp --recursive 'gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/ci/host_profile_framework.tar.gz' .
-          tar -xzf host_profile_framework.tar.gz
-          rm  host_profile_framework.tar.gz
-          
-          gcloud storage cp --recursive 'gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/ci/mac_release_framework_arm64.tar.gz' .
-          tar -xzf mac_release_framework_arm64.tar.gz
-          rm mac_release_framework_arm64.tar.gz
-
-          gcloud storage cp --recursive 'gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/ci/host_release_framework.tar.gz' .
-          tar -xzf host_release_framework.tar.gz
-          rm  host_release_framework.tar.gz
-
-          gcloud storage cp --recursive 'gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/ci/mac_debug_gen_snapshot_arm64.tar.gz' .
-          tar -xzf mac_debug_gen_snapshot_arm64.tar.gz
-          rm mac_debug_gen_snapshot_arm64.tar.gz
-
-          gcloud storage cp --recursive 'gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/ci/mac_profile_gen_snapshot_arm64.tar.gz' .
-          tar -xzf mac_profile_gen_snapshot_arm64.tar.gz
-          rm mac_profile_gen_snapshot_arm64.tar.gz
-
-          gcloud storage cp --recursive 'gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/ci/mac_release_gen_snapshot_arm64.tar.gz' .
-          tar -xzf mac_release_gen_snapshot_arm64.tar.gz
-          rm mac_release_gen_snapshot_arm64.tar.gz
-
-          gcloud storage cp --recursive 'gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/ci/host_debug_gen_snapshot_arm64.tar.gz' .
-          tar -xzf host_debug_gen_snapshot_arm64.tar.gz
-          rm host_debug_gen_snapshot_arm64.tar.gz
-
-          gcloud storage cp --recursive 'gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/ci/host_profile_gen_snapshot_arm64.tar.gz' .
-          tar -xzf host_profile_gen_snapshot_arm64.tar.gz
-          rm host_profile_gen_snapshot_arm64.tar.gz
-
-          gcloud storage cp --recursive 'gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/ci/host_release_gen_snapshot_arm64.tar.gz' .
-          tar -xzf host_release_gen_snapshot_arm64.tar.gz
-          rm host_release_gen_snapshot_arm64.tar.gz
-
-
-          python3 flutter/sky/tools/create_embedder_framework.py \
-          --dst out/debug/framework \
-          --arm64-out-dir out/ci/mac_debug_framework_arm64 \
-          --x64-out-dir out/ci/host_debug_framework \
-          --zip
-
-          python3 flutter/sky/tools/create_macos_framework.py \
-          --dst out/debug/framework \
-          --arm64-out-dir out/ci/mac_debug_framework_arm64 \
-          --x64-out-dir out/ci/host_debug_framework \
-          --zip
-
-          python3 flutter/sky/tools/create_macos_framework.py \
-          --dst out/profile/framework \
-          --arm64-out-dir out/ci/mac_profile_framework_arm64 \
-          --x64-out-dir out/ci/host_profile_framework \
-          --zip
-
-          python3 flutter/sky/tools/create_macos_framework.py \
-          --dst out/release/framework \
-          --arm64-out-dir out/ci/mac_release_framework_arm64 \
-          --x64-out-dir out/ci/host_release_framework \
-          --dsym \
-          --strip \
-          --zip
-
-          python3 flutter/sky/tools/create_macos_gen_snapshots.py \
-          --dst out/debug/snapshot \
-          --arm64-path out/ci/mac_debug_gen_snapshot_arm64/universal/gen_snapshot_arm64 \
-          --x64-path out/ci/host_debug_gen_snapshot/universal/gen_snapshot_x64 \
-          --zip
-
-          python3 flutter/sky/tools/create_macos_gen_snapshots.py \
-          --dst out/profile/snapshot \
-          --arm64-path out/ci/mac_profile_gen_snapshot_arm64/universal/gen_snapshot_arm64 \
-          --x64-path out/ci/host_profile_gen_snapshot/universal/gen_snapshot_x64 \
-          --zip
-
-          python3 flutter/sky/tools/create_macos_gen_snapshots.py \
-          --dst out/release/snapshot \
-          --arm64-path out/ci/mac_release_gen_snapshot_arm64/universal/gen_snapshot_arm64 \
-          --x64-path out/ci/host_release_gen_snapshot/universal/gen_snapshot_x64 \
-          --zip
-
-          gcloud storage cp --recursive out/debug/framework/FlutterEmbedder.framework.zip gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/darwin-x64/
-          gcloud storage cp --recursive out/debug/framework/FlutterMacOS.framework.zip gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/darwin-x64/
-          gcloud storage cp --recursive out/profile/framework/FlutterMacOS.framework.zip gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/darwin-x64-profile/
-          gcloud storage cp --recursive out/release/framework/FlutterMacOS.framework.zip gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/darwin-x64-release/
-          gcloud storage cp --recursive out/debug/framework/framework.zip gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/darwin-x64/
-          gcloud storage cp --recursive out/profile/framework/framework.zip gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/darwin-x64-profile/
-          gcloud storage cp --recursive out/release/framework/framework.zip gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/darwin-x64-release/
-          gcloud storage cp --recursive out/debug/snapshot/gen_snapshot.zip gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/darwin-x64/
-          gcloud storage cp --recursive out/profile/snapshot/gen_snapshot.zip gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/darwin-x64-profile/
-          gcloud storage cp --recursive out/release/snapshot/gen_snapshot.zip gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/darwin-x64-release/
+  build-macos-release:
+  needs: build-engine-mac
+  runs-on: macos-latest
+  defaults:
+    run:
+      shell: bash
+  steps:
+    - name: Set up Xcode version
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: '16.4'
+    #- name: Authenticate to Google Cloud
+    #  uses: google-github-actions/auth@v2
+    #  with:
+    #    workload_identity_provider: 'projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/POOL_ID/providers/PROVIDER_ID'
+    #    service_account: 'SERVICE_ACCOUNT_EMAIL'
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+      with:
+        version: '>= 363.0.0'
+    - name: Setup gcloud
+      env:
+        GCP_CREDENTIALS: ${{ secrets.GOOGLE_STORAGE_BUCKET_SECRET }}
+      run: |
+        echo "$GCP_CREDENTIALS"  | base64 -d  > "$HOME"/gcloud.json
+        gcloud auth activate-service-account --key-file="$HOME"/gcloud.json
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.13'
+    - name: Set up depot_tools / gclient
+      run: |
+        git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git $HOME/depot_tools
+        # Append depot_tools to the PATH for subsequent steps
+        echo "$HOME/depot_tools" >> $GITHUB_PATH
+    - name: Check out the repository
+      uses: actions/checkout@v4
+    - name: assemble flock
+      uses: ./.github/actions/assemble-flock
+      with:
+        flutter_ref: ${{ env.FLUTTER_BRANCH }}
+        token: ${{ secrets.REPO_WORKFLOW_PAT }}
+        
+    - name: gclient sync macos
+      run: |
+        # Use custom gclient to trim size
+        cd flock
+        cp engine/scripts/slim-mac.gclient .gclient
+        gclient sync -D
+    - name: build macos release
+      run: |
+        cd flock/engine/src
+        
+        gcloud storage cp --recursive 'gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/ci/mac_debug_framework_arm64.tar.gz' .
+        tar -xzf mac_debug_framework_arm64.tar.gz
+        rm mac_debug_framework_arm64.tar.gz
+        gcloud storage cp --recursive 'gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/ci/host_debug_framework.tar.gz' .
+        tar -xzf host_debug_framework.tar.gz
+        rm  host_debug_framework.tar.gz
+        
+        gcloud storage cp --recursive 'gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/ci/mac_profile_framework_arm64.tar.gz' .
+        tar -xzf mac_profile_framework_arm64.tar.gz
+        rm mac_profile_framework_arm64.tar.gz
+        gcloud storage cp --recursive 'gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/ci/host_profile_framework.tar.gz' .
+        tar -xzf host_profile_framework.tar.gz
+        rm  host_profile_framework.tar.gz
+        
+        gcloud storage cp --recursive 'gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/ci/mac_release_framework_arm64.tar.gz' .
+        tar -xzf mac_release_framework_arm64.tar.gz
+        rm mac_release_framework_arm64.tar.gz
+        gcloud storage cp --recursive 'gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/ci/host_release_framework.tar.gz' .
+        tar -xzf host_release_framework.tar.gz
+        rm  host_release_framework.tar.gz
+        gcloud storage cp --recursive 'gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/ci/mac_debug_gen_snapshot_arm64.tar.gz' .
+        tar -xzf mac_debug_gen_snapshot_arm64.tar.gz
+        rm mac_debug_gen_snapshot_arm64.tar.gz
+        gcloud storage cp --recursive 'gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/ci/mac_profile_gen_snapshot_arm64.tar.gz' .
+        tar -xzf mac_profile_gen_snapshot_arm64.tar.gz
+        rm mac_profile_gen_snapshot_arm64.tar.gz
+        gcloud storage cp --recursive 'gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/ci/mac_release_gen_snapshot_arm64.tar.gz' .
+        tar -xzf mac_release_gen_snapshot_arm64.tar.gz
+        rm mac_release_gen_snapshot_arm64.tar.gz
+        gcloud storage cp --recursive 'gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/ci/host_debug_gen_snapshot_arm64.tar.gz' .
+        tar -xzf host_debug_gen_snapshot_arm64.tar.gz
+        rm host_debug_gen_snapshot_arm64.tar.gz
+        gcloud storage cp --recursive 'gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/ci/host_profile_gen_snapshot_arm64.tar.gz' .
+        tar -xzf host_profile_gen_snapshot_arm64.tar.gz
+        rm host_profile_gen_snapshot_arm64.tar.gz
+        gcloud storage cp --recursive 'gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/ci/host_release_gen_snapshot_arm64.tar.gz' .
+        tar -xzf host_release_gen_snapshot_arm64.tar.gz
+        rm host_release_gen_snapshot_arm64.tar.gz
+        python3 flutter/sky/tools/create_embedder_framework.py \
+        --dst out/debug/framework \
+        --arm64-out-dir out/ci/mac_debug_framework_arm64 \
+        --x64-out-dir out/ci/host_debug_framework \
+        --zip
+        python3 flutter/sky/tools/create_macos_framework.py \
+        --dst out/debug/framework \
+        --arm64-out-dir out/ci/mac_debug_framework_arm64 \
+        --x64-out-dir out/ci/host_debug_framework \
+        --zip
+        python3 flutter/sky/tools/create_macos_framework.py \
+        --dst out/profile/framework \
+        --arm64-out-dir out/ci/mac_profile_framework_arm64 \
+        --x64-out-dir out/ci/host_profile_framework \
+        --zip
+        python3 flutter/sky/tools/create_macos_framework.py \
+        --dst out/release/framework \
+        --arm64-out-dir out/ci/mac_release_framework_arm64 \
+        --x64-out-dir out/ci/host_release_framework \
+        --dsym \
+        --strip \
+        --zip
+        python3 flutter/sky/tools/create_macos_gen_snapshots.py \
+        --dst out/debug/snapshot \
+        --arm64-path out/ci/mac_debug_gen_snapshot_arm64/universal/gen_snapshot_arm64 \
+        --x64-path out/ci/host_debug_gen_snapshot/universal/gen_snapshot_x64 \
+        --zip
+        python3 flutter/sky/tools/create_macos_gen_snapshots.py \
+        --dst out/profile/snapshot \
+        --arm64-path out/ci/mac_profile_gen_snapshot_arm64/universal/gen_snapshot_arm64 \
+        --x64-path out/ci/host_profile_gen_snapshot/universal/gen_snapshot_x64 \
+        --zip
+        python3 flutter/sky/tools/create_macos_gen_snapshots.py \
+        --dst out/release/snapshot \
+        --arm64-path out/ci/mac_release_gen_snapshot_arm64/universal/gen_snapshot_arm64 \
+        --x64-path out/ci/host_release_gen_snapshot/universal/gen_snapshot_x64 \
+        --zip
+        gcloud storage cp --recursive out/debug/framework/FlutterEmbedder.framework.zip gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/darwin-x64/
+        gcloud storage cp --recursive out/debug/framework/FlutterMacOS.framework.zip gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/darwin-x64/
+        gcloud storage cp --recursive out/profile/framework/FlutterMacOS.framework.zip gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/darwin-x64-profile/
+        gcloud storage cp --recursive out/release/framework/FlutterMacOS.framework.zip gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/darwin-x64-release/
+        gcloud storage cp --recursive out/debug/framework/framework.zip gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/darwin-x64/
+        gcloud storage cp --recursive out/profile/framework/framework.zip gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/darwin-x64-profile/
+        gcloud storage cp --recursive out/release/framework/framework.zip gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/darwin-x64-release/
+        gcloud storage cp --recursive out/debug/snapshot/gen_snapshot.zip gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/darwin-x64/
+        gcloud storage cp --recursive out/profile/snapshot/gen_snapshot.zip gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/darwin-x64-profile/
+        gcloud storage cp --recursive out/release/snapshot/gen_snapshot.zip gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/darwin-x64-release/
 
   build-engine-ios:
     # We'll run on whatever OS the matrix entry specifies.
