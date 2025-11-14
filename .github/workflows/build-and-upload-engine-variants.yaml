@@ -510,16 +510,16 @@ jobs:
           rm mac_release_gen_snapshot_arm64.tar.gz
 
           gcloud storage cp --recursive 'gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/ci/host_debug_gen_snapshot_arm64.tar.gz' .
-          tar -xzf host_debug_gen_snapshot_arm64.tar.gz
-          rm host_debug_gen_snapshot_arm64.tar.gz
+          tar -xzf host_debug_gen_snapshot.tar.gz
+          rm host_debug_gen_snapshot.tar.gz
 
           gcloud storage cp --recursive 'gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/ci/host_profile_gen_snapshot_arm64.tar.gz' .
-          tar -xzf host_profile_gen_snapshot_arm64.tar.gz
-          rm host_profile_gen_snapshot_arm64.tar.gz
+          tar -xzf host_profile_gen_snapshot.tar.gz
+          rm host_profile_gen_snapshot.tar.gz
 
           gcloud storage cp --recursive 'gs://flutter-graphite-builds/flutter_infra_release/flutter/${{github.sha}}/ci/host_release_gen_snapshot_arm64.tar.gz' .
-          tar -xzf host_release_gen_snapshot_arm64.tar.gz
-          rm host_release_gen_snapshot_arm64.tar.gz
+          tar -xzf host_release_gen_snapshot.tar.gz
+          rm host_release_gen_snapshot.tar.gz
 
 
           python3 flutter/sky/tools/create_embedder_framework.py \

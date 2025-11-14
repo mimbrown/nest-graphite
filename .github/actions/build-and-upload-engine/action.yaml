@@ -106,30 +106,17 @@ runs:
           ./flutter/bin/et stamp
           gcloud storage cp out/engine_stamp.json gs://flutter-graphite-builds/flutter_infra_release/flutter/${{ inputs.engine_version }}/
 
-    #Causes the build to crash, but can be useful for debugging
-    #- name: Check artifact output
-    #  shell: bash
-    #  run: |
-    #    cd flock/engine/src
-    #    ls -lh out/
-    #    ls -lh out/ci
-    #    ls -lh out/${{ inputs.config_name }}
-    #    ls -lh out/${{ inputs.config_name }}/zip_archives
-
-    - name: Copy Zip Archives & Engine Outputs
+    - name: Copy Zip Archives
       shell: bash
       if: ${{ hashFiles(format('flock/engine/src/out/{0}/zip_archives/**', inputs.config_name))!= ''  && contains(inputs.config_name, 'test') == false && inputs.gcp_bucket != ''}}
       run: |
         cd flock/engine/src
         echo "copying zip archives to /build_outputs/flutter/<engine-revision>/<platform>/<artifact-name>"
         gcloud storage cp --recursive out/${{ inputs.config_name }}/zip_archives/* gs://${{inputs.gcp_bucket}}/flutter_infra_release/flutter/${{ inputs.engine_version }}/
-        echo "copying engine outputs to /build_outputs/flutter/<engine-revision>/<platform>/<artifact-name>"
-        tar c out/${{ inputs.config_name }} | gzip > out/${{ inputs.config_name }}.tar.gz
-        gcloud storage cp --recursive out/${{ inputs.config_name }}.tar.gz gs://${{inputs.gcp_bucket}}/flutter_infra_release/flutter/${{ inputs.engine_version }}/${{ inputs.config_name }}.tar.gz
 
     - name: Copy Engine Outputs
       shell: bash
-      if: ${{ hashFiles(format('flock/engine/src/out/{0}/zip_archives/**', inputs.config_name)) == '' && contains(inputs.config_name, 'test') == false && inputs.gcp_bucket != '' }}
+      if: ${{ (hashFiles(format('flock/engine/src/out/{0}/zip_archives/**', inputs.config_name)) == '' ||  contains(inputs.config_name, 'framework') || contains(inputs.config_name, 'snapshot'))&& contains(inputs.config_name, 'test') == false && inputs.gcp_bucket != '' }}
       run: |
         cd flock/engine/src
         echo "copying engine outputs to /build_outputs/flutter/<engine-revision>/<platform>/<artifact-name>"
