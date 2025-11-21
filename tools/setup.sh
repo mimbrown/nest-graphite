@@ -1,3 +1,3 @@
 cd flock
 gclient sync
-git checkout master
+git checkout stable
