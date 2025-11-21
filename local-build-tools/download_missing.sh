@@ -19,9 +19,14 @@ targets=(
     $infraDir/sky_engine.zip \
 )
 for target in "${targets[@]}"; do
-    mkdir -p "$outDir/${target%/*}"
-    echo Downloading https://storage.googleapis.com/$target
-    curl -0 --output $outDir/$target \
-        https://storage.googleapis.com/$target
+    dest=$outDir/$target
+    if [ ! -f $dest ]; then
+        mkdir -p "$outDir/${target%/*}"
+        echo Downloading https://storage.googleapis.com/$target
+        curl -0 --output $dest \
+            https://storage.googleapis.com/$target
+    else
+        echo Skipped. Already exists: $target
+    fi
 done
 echo Dependencies are downloaded and stored in proper folder hierarchy!

@@ -49,8 +49,8 @@ FlutterMacOSFrameworks = {
 
 FlutterIOSFrameworks = {
     "ios": "ci/ios_debug",
-    "ios_profile": "ci/ios_profile",
-    "ios_release": "ci/ios_release",
+    "ios-profile": "ci/ios_profile",
+    "ios-release": "ci/ios_release",
 }
 
 class FlutterEngineBuilder:
@@ -530,7 +530,7 @@ class FlutterEngineBuilder:
         cwd = self.engine_src_dir
 
         for name, path in build_outputs.items():
-            if name in ["ios", "ios_profile", "ios_release"]:
+            if name in ["ios", "ios-profile", "ios-release"]:
                 try:
                     out_dir = f"out/{name}"
                     cmd = [
