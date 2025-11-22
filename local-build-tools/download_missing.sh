@@ -11,12 +11,13 @@ while [[ ${#engineVersion} -ne 40 ]]; do
     sleep 1
 done
 outDir=$flutterRepo/engine/src/out
-infraDir=flutter_infra_release/flutter/$engineVersion/
+infraDir=flutter_infra_release/flutter/$engineVersion
 targets=(
+    $infraDir/android-x86/artifacts.zip \
     $infraDir/flutter_gpu.zip \
     $infraDir/flutter_patched_sdk.zip \
     $infraDir/flutter_patched_sdk_product.zip
-    $infraDir/sky_engine.zip \
+    $infraDir/sky_engine.zip
 )
 for target in "${targets[@]}"; do
     dest=$outDir/$target
