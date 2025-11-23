@@ -259,23 +259,6 @@ class FlutterEngineBuilder:
         # This is typically handled by the assemble-flock GitHub action
         self.log("Flock directory exists, ready for build")
         return True
-    
-    def zip_directory(self, source_dir, output_zip, arcname_prefix=""):
-        """Zips a directory recursively."""
-        if not source_dir.exists():
-            print(f"  ! Warning: Source directory not found: {source_dir}")
-            return
-
-        print(f"  ~ Zipping {source_dir.name} -> {output_zip.name}...")
-        with zipfile.ZipFile(output_zip, 'w', zipfile.ZIP_DEFLATED) as zf:
-            for file in source_dir.rglob('*'):
-                if file.is_file():
-                    # Make path relative to source
-                    rel_path = file.relative_to(source_dir)
-                    # If a prefix is needed (e.g. putting it inside a folder in the zip), add it
-                    arcname = Path(arcname_prefix) / rel_path if arcname_prefix else rel_path
-                    zf.write(file, arcname)
-        print(f"  + Created {output_zip.name}")
 
     def build_engine(self, config: BuildConfig, output_dir: Optional[Path] = None):
         """Build engine
@@ -309,45 +292,10 @@ class FlutterEngineBuilder:
             ]
             
             self.run_command(cmd, cwd=cwd)
-            
-            zip_dir = cwd / "out" / config.config_name / "zip_archives"
-
-            # Special case for building sky_engine.zip:
-            if config.config_name == "ci/host_debug":
-                sky_engine_src = cwd/ "out" / config.config_name  / "gen" / "dart-pkg" / "sky_engine"
-                self.zip_directory(sky_engine_src, zip_dir / "sky_engine.zip")
-                self.log(f"Successfully built sky_engine")
-
-            # Special case for building flutter_gpu.zip:
-            if config.config_name == "ci/host_debug":
-                # 4. flutter_gpu.zip
-                # The flutter_gpu package source is in src/flutter/lib/gpu
-                gpu_src = cwd / "flutter" / "lib" / "gpu"
-                if gpu_src.exists():
-                    self.zip_directory(gpu_src, zip_dir / "flutter_gpu.zip")
-                    self.log(f"Successfully built flutter_gpu")
-                else:
-                    print(f"  ! Error: Could not find flutter_gpu source at {gpu_src}.")
-
-            # Special case for building flutter_patched_sdk.zip:
-            if config.config_name == "ci/host_debug":
-                cmd = [
-                    "ninja",
-                    "-C", f"out/{config.config_name}",
-                    "flutter/build/archives:flutter_patched_sdk"
-                ]
-                self.run_command(cmd, cwd=cwd)
-                self.log(f"Successfully built flutter_patched_sdk")
-
-            # Special case for building flutter_patched_sdk_product.zip:
-            if config.config_name == "ci/host_release":
-                release_sdk_src = cwd / "out" / config.config_name / "flutter_patched_sdk"
-                self.zip_directory(release_sdk_src, zip_dir / "flutter_patched_sdk_product.zip")
-                self.log(f"Successfully built flutter_patched_sdk_product")
-            
             self.log(f"Successfully built {config.config_name}")
-# 
+            
             # Move zip files to flutter_infra_release folder
+            zip_dir = cwd / "out" / config.config_name / "zip_archives"
             dest_dir = f"{self.engine_src_dir}/out/flutter_infra_release/flutter/{self.hash}"
             if os.path.isdir(zip_dir) and os.listdir(zip_dir) and config.config_name.find("test") == -1:
                 shutil.copytree(zip_dir,dest_dir, dirs_exist_ok=True)
