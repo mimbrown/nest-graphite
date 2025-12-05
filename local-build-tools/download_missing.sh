@@ -13,6 +13,7 @@ done
 outDir=$flutterRepo/engine/src/out
 infraDir=flutter_infra_release/flutter/$engineVersion
 targets=(
+    $infraDir/android-x64/artifacts.zip \
     $infraDir/android-x86/artifacts.zip \
     $infraDir/engine_stamp.json
     $infraDir/flutter_gpu.zip \

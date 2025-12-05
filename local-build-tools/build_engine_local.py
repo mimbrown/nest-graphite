@@ -109,7 +109,12 @@ class FlutterEngineBuilder:
         BuildConfig("android release x64", "ci/android_release_x64", Platform.ANDROID),
     ]
 
+    # Android build configurations (ubuntu runners)
+    # Prefer CI to non-CI build configurations
+    # If this is planned to be run on both Linux and macOS, then duplicates can probably be removed
     ANDROID_LINUX_CONFIGS = [
+        BuildConfig("android debug unopt arm64", "android_debug_unopt_arm64", Platform.ANDROID),
+        BuildConfig("android debug unopt x64", "android_debug_unopt_x64", Platform.ANDROID),
         BuildConfig("android debug", "ci/android_debug", Platform.ANDROID),
         BuildConfig("android debug unopt", "ci/android_debug_unopt", Platform.ANDROID),
         BuildConfig("android debug arm64", "ci/android_debug_arm64", Platform.ANDROID),
