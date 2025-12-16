@@ -13,8 +13,19 @@ done
 outDir=$flutterRepo/engine/src/out
 infraDir=flutter_infra_release/flutter/$engineVersion
 targets=(
+    $infraDir/android-arm/linux-x64.zip \
+    $infraDir/android-arm-profile/linux-x64.zip \
+    $infraDir/android-arm-release/linux-x64.zip \
+    $infraDir/windows-x64/artifacts.zip \
+    $infraDir/windows-x64/font-subset.zip \
+    $infraDir/linux-x64/artifacts.zip \
+    $infraDir/linux-x64/font-subset.zip \
+    $infraDir/dart-sdk-linux-x64.zip \
+    $infraDir/dart-sdk-windows-x64.zip \
     $infraDir/android-x64/artifacts.zip \
     $infraDir/android-x86/artifacts.zip \
+    $infraDir/android-x86-profile/artifacts.zip \
+    $infraDir/android-x86-release/artifacts.zip \
     $infraDir/engine_stamp.json
     $infraDir/flutter_gpu.zip \
     $infraDir/flutter_patched_sdk.zip \
