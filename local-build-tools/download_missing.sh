@@ -39,6 +39,9 @@ targets=(
     $infraDir/linux-arm64/font-subset.zip \
     $infraDir/linux-x64/artifacts.zip \
     $infraDir/linux-x64/font-subset.zip \
+    $infraDir/linux-x64-debug/linux-x64-flutter-gtk.zip
+    $infraDir/linux-x64-profile/linux-x64-flutter-gtk.zip
+    $infraDir/linux-x64-release/linux-x64-flutter-gtk.zip
     $infraDir/dart-sdk-linux-arm64.zip \
     $infraDir/dart-sdk-linux-x64.zip \
     $infraDir/dart-sdk-windows-x64.zip \
