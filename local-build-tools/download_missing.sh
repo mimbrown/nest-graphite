@@ -30,6 +30,7 @@ targets=(
     $infraDir/android-x64-release/artifacts.zip \
     $infraDir/android-x86/artifacts.zip \
     $infraDir/windows-x64/artifacts.zip \
+    $infraDir/windows-x64/flutter-cpp-client-wrapper.zip \
     $infraDir/windows-x64/font-subset.zip \
     $infraDir/windows-x64-debug/windows-x64-flutter.zip \
     $infraDir/windows-x64-profile/windows-x64-flutter.zip \
