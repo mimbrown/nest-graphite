@@ -1,0 +1,128 @@
+diff --git a/modules/skparagraph/src/ParagraphImpl.cpp b/modules/skparagraph/src/ParagraphImpl.cpp
+index 7a4b8c13e8..deaa098c7e 100644
+--- a/modules/skparagraph/src/ParagraphImpl.cpp
++++ b/modules/skparagraph/src/ParagraphImpl.cpp
+@@ -550,6 +550,35 @@ void ParagraphImpl::buildClusterTable() {
+     }
+     fClustersIndexFromCodeUnit[fText.size()] = fClusters.size();
+     fClusters.emplace_back(this, EMPTY_RUN, 0, 0, this->text({fText.size(), fText.size()}), 0, 0);
++
++    // Defensive fix: ensure there are no EMPTY_INDEX entries left in
++    // fClustersIndexFromCodeUnit. In some cases (segmentation/bidi
++    // boundaries) certain code unit positions may not get assigned a
++    // cluster index above, which later causes an assertion in
++    // ParagraphImpl::clusterIndex. Fill any gaps by propagating the
++    // nearest known cluster index (left-to-right, then right-to-left)
++    // so that every code unit maps to a valid cluster.
++    const size_t n = fText.size();
++    size_t last = EMPTY_INDEX;
++    for (size_t i = 0; i <= n; ++i) {
++        if (fClustersIndexFromCodeUnit[i] == EMPTY_INDEX) {
++            if (last != EMPTY_INDEX) {
++                fClustersIndexFromCodeUnit[i] = last;
++            }
++        } else {
++            last = fClustersIndexFromCodeUnit[i];
++        }
++    }
++    size_t next = EMPTY_INDEX;
++    for (size_t i = n + 1; i-- > 0;) {
++        if (fClustersIndexFromCodeUnit[i] == EMPTY_INDEX) {
++            if (next != EMPTY_INDEX) {
++                fClustersIndexFromCodeUnit[i] = next;
++            }
++        } else {
++            next = fClustersIndexFromCodeUnit[i];
++        }
++    }
+ }
+ 
+ bool ParagraphImpl::shapeTextIntoEndlessLine() {
+diff --git a/modules/skunicode/src/SkUnicode_icu_bidi.cpp b/modules/skunicode/src/SkUnicode_icu_bidi.cpp
+index f38c081110..359e7ba235 100644
+--- a/modules/skunicode/src/SkUnicode_icu_bidi.cpp
++++ b/modules/skunicode/src/SkUnicode_icu_bidi.cpp
+@@ -114,40 +114,60 @@ bool SkBidiFactory::ExtractBidi(const char utf8[],
+         return false;
+     }
+ 
+-    // Iterate through bidi regions and the result positions into utf8
+-    const char* start8 = utf8;
++    // Build a mapping from UTF-16 code unit indices -> UTF-8 byte offsets.
++    // This is robust when UTF-16 code points span multiple code units (surrogates)
++    // and when ICU returns boundaries at UTF-16 code-unit indices that don't
++    // align with a single "next codepoint" iteration over UTF-8.
++    const char* ptr8 = utf8;
+     const char* end8 = utf8 + utf8Units;
+-    SkUnicode::BidiLevel currentLevel = 0;
+-
+-    SkUnicode::Position pos8 = 0;
+     SkUnicode::Position pos16 = 0;
+-    SkUnicode::Position end16 = this->bidi_getLength(bidi.get());
++    SkUnicode::Position end16 = static_cast<SkUnicode::Position>(utf16.size());
+ 
+     if (end16 == 0) {
+         return true;
+     }
++
++    // Precompute mapping: for every UTF-16 code unit index (0..end16)
++    // store the corresponding UTF-8 byte offset in the original buffer.
++    std::vector<SkUnicode::Position> utf16_to_utf8;
++    utf16_to_utf8.reserve(end16 + 1);
++
++    while (ptr8 < end8) {
++        SkUnicode::Position byteIndex = static_cast<SkUnicode::Position>(ptr8 - utf8);
++        SkUnichar u = utf8_next(&ptr8, end8);
++        int16_t n16 = static_cast<int16_t>(SkUTF::ToUTF16(u));
++        // For each UTF-16 code unit that represents this codepoint, record
++        // the same starting UTF-8 byte offset.
++        for (int i = 0; i < n16; ++i) {
++            utf16_to_utf8.push_back(byteIndex);
++            ++pos16;
++        }
++    }
++    // sentinel: position at end maps to end of utf8
++    utf16_to_utf8.push_back(utf8Units);
++    SkASSERT(static_cast<SkUnicode::Position>(utf16_to_utf8.size()) == end16 + 1);
++
++    // If the whole paragraph is unidirectional, return single region covering full utf8
+     if (this->bidi_getDirection(bidi.get()) != UBIDI_MIXED) {
+-        // The entire paragraph is unidirectional.
+         bidiRegions->emplace_back(0, utf8Units, this->bidi_getLevelAt(bidi.get(), 0));
+         return true;
+     }
+ 
+-    while (pos16 < end16) {
+-        auto level = this->bidi_getLevelAt(bidi.get(), pos16);
+-        if (pos16 == 0) {
+-            currentLevel = level;
+-        } else if (level != currentLevel) {
+-            SkUnicode::Position end = start8 - utf8;
+-            bidiRegions->emplace_back(pos8, end, currentLevel);
+-            currentLevel = level;
+-            pos8 = end;
++    // Iterate through UTF-16 code unit indices and detect level changes.
++    SkUnicode::Position runStart16 = 0;
++    SkUnicode::BidiLevel currentLevel = this->bidi_getLevelAt(bidi.get(), 0);
++    for (SkUnicode::Position i16 = 1; i16 <= end16; ++i16) {
++        SkUnicode::BidiLevel level = (i16 < end16) ? this->bidi_getLevelAt(bidi.get(), i16)
++                                                   : currentLevel;
++        if (i16 == end16 || level != currentLevel) {
++            SkUnicode::Position start8 = utf16_to_utf8[runStart16];
++            SkUnicode::Position end8pos = utf16_to_utf8[i16];
++            bidiRegions->emplace_back(start8, end8pos, currentLevel);
++            runStart16 = i16;
++            if (i16 < end16) {
++                currentLevel = level;
++            }
++        }
++    }
+-        SkUnichar u = utf8_next(&start8, end8);
+-        pos16 += SkUTF::ToUTF16(u);
+-    }
+-    SkUnicode::Position end = start8 - utf8;
+-    if (end != pos8) {
+-        bidiRegions->emplace_back(pos8, end, currentLevel);
+-    }
+     return true;
+ }
