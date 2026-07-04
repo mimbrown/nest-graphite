@@ -25,9 +25,9 @@ on:
         required: true
         default: 'smoke'
       apply_skia_patch:
-        description: 'Apply the Skia unicode patch (repo copy currently truncated)'
+        description: 'Apply the Skia unicode patch'
         required: false
-        default: 'false'
+        default: 'true'
       upload_gcs:
         description: 'Upload to GCS (requires GCP_SA_KEY secret)'
         required: false

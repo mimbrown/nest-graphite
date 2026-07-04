@@ -23,9 +23,9 @@ on:
         required: true
         default: 'androidlinux'
       apply_skia_patch:
-        description: 'Apply the Skia unicode patch (file in repo is currently truncated)'
+        description: 'Apply the Skia unicode patch'
         required: false
-        default: 'false'
+        default: 'true'
       graphite_ref:
         description: 'silnrsi/graphite ref to build against'
         required: false
