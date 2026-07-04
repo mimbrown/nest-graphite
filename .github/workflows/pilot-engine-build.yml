@@ -22,6 +22,14 @@ on:
         description: 'Platform group: mac | ios | android | androidlinux | linux | web'
         required: true
         default: 'androidlinux'
+      apply_skia_patch:
+        description: 'Apply the Skia unicode patch (file in repo is currently truncated)'
+        required: false
+        default: 'false'
+      graphite_ref:
+        description: 'silnrsi/graphite ref to build against'
+        required: false
+        default: 'ca8d821e60a15b6c24e404c9086992c975d8e1cf'
 
 env:
   FLUTTER_TAG: ${{ github.event.inputs.flutter_tag }}
@@ -115,12 +123,14 @@ jobs:
       # third_party/harfbuzz and would clobber anything placed there earlier.
       - name: Inject Graphite + harfbuzz override
         run: |
-          git clone --depth=1 https://github.com/silnrsi/graphite flock/engine/src/flutter/third_party/graphite
+          git clone https://github.com/silnrsi/graphite flock/engine/src/flutter/third_party/graphite
+          git -C flock/engine/src/flutter/third_party/graphite checkout "${{ github.event.inputs.graphite_ref }}"
           cp patch-flutter/overrides/harfbuzz/BUILD.gn flock/engine/src/flutter/third_party/harfbuzz/BUILD.gn
 
       # The unicode patch targets Skia sources (modules/skparagraph, modules/skunicode),
       # so it must be applied inside the Skia checkout, which only exists after sync.
       - name: Apply Skia unicode patch
+        if: ${{ github.event.inputs.apply_skia_patch == 'true' }}
         run: |
           git -C flock/engine/src/flutter/third_party/skia apply -v \
             "$GITHUB_WORKSPACE/patch-flutter/patches/unicode-0600-0603-fix.patch"
