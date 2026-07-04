@@ -72,7 +72,11 @@ jobs:
       - name: Write slim .gclient
         run: |
           case "$PLATFORM" in
-            android|androidlinux)
+            # Android-on-Linux needs the Debian sysroot for host (clang_x64) tools,
+            # which is gated behind download_linux_deps.
+            androidlinux)
+              LINUX_DEPS=True; ANDROID_DEPS=True; ESBUILD=False; EMSDK_LINE="" ;;
+            android)
               LINUX_DEPS=False; ANDROID_DEPS=True; ESBUILD=False; EMSDK_LINE="" ;;
             linux)
               LINUX_DEPS=True; ANDROID_DEPS=False; ESBUILD=False; EMSDK_LINE="" ;;
