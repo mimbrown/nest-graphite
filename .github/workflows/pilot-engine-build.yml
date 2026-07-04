@@ -30,6 +30,10 @@ on:
         description: 'silnrsi/graphite ref to build against'
         required: false
         default: 'ca8d821e60a15b6c24e404c9086992c975d8e1cf'
+      runner:
+        description: 'Runner label (ubuntu-latest or macos-latest)'
+        required: false
+        default: 'ubuntu-latest'
 
 env:
   FLUTTER_TAG: ${{ github.event.inputs.flutter_tag }}
@@ -38,7 +42,7 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.inputs.runner || 'ubuntu-latest' }}
     timeout-minutes: 355
     steps:
       - name: Checkout nest-graphite
@@ -148,7 +152,8 @@ jobs:
         run: |
           OUT="flock/engine/src/out/$CONFIG"
           found=0
-          for so in "$OUT"/libflutter.so "$OUT"/so.unstripped/libflutter.so "$OUT"/lib.unstripped/libflutter.so; do
+          for so in "$OUT"/libflutter.so "$OUT"/so.unstripped/libflutter.so "$OUT"/lib.unstripped/libflutter.so \
+                    "$OUT"/Flutter.framework/Flutter "$OUT"/FlutterMacOS.framework/FlutterMacOS; do
             if [ -f "$so" ]; then
               hits=$(strings -a "$so" | grep -c graphite || true)
               echo "$so: $hits graphite string(s)"
