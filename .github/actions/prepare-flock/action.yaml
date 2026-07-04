@@ -99,13 +99,15 @@ runs:
         df -h /
 
     # Graphite injection happens AFTER gclient sync so the DEPS-managed
-    # harfbuzz checkout can't clobber the override.
+    # harfbuzz checkout can't clobber the override. The BUILD.gn is generated
+    # from the stock one in the checkout (not a static snapshot), so it tracks
+    # upstream harfbuzz source-list changes across Flutter versions.
     - name: Inject Graphite + harfbuzz override
       shell: bash
       run: |
         git clone https://github.com/silnrsi/graphite flock/engine/src/flutter/third_party/graphite
         git -C flock/engine/src/flutter/third_party/graphite checkout "${{ inputs.graphite_ref }}"
-        cp patch-flutter/overrides/harfbuzz/BUILD.gn flock/engine/src/flutter/third_party/harfbuzz/BUILD.gn
+        python3 patch-flutter/scripts/graphite_harfbuzz_buildgn.py flock
 
     # The unicode patch targets Skia sources, so it applies inside the
     # Skia checkout (only exists after sync).

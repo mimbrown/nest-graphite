@@ -133,7 +133,7 @@ jobs:
         run: |
           git clone https://github.com/silnrsi/graphite flock/engine/src/flutter/third_party/graphite
           git -C flock/engine/src/flutter/third_party/graphite checkout "${{ github.event.inputs.graphite_ref }}"
-          cp patch-flutter/overrides/harfbuzz/BUILD.gn flock/engine/src/flutter/third_party/harfbuzz/BUILD.gn
+          python3 patch-flutter/scripts/graphite_harfbuzz_buildgn.py flock
 
       # The unicode patch targets Skia sources (modules/skparagraph, modules/skunicode),
       # so it must be applied inside the Skia checkout, which only exists after sync.

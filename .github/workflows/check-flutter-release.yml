@@ -1,0 +1,71 @@
+name: Check Flutter Release
+
+# Runs daily: looks up the current Flutter stable release, checks whether the
+# Graphite bucket already has that engine hash (engine_stamp.json is the
+# release marker), and if not, dispatches a full build-engines-v2 run with
+# GCS upload enabled.
+#
+# Repo variables consulted:
+#   APPLY_SKIA_PATCH — 'true' once the complete unicode patch is restored
+#   GCP_BUCKET       — overrides the default bucket name
+
+on:
+  schedule:
+    - cron: '0 5 * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Dispatch a build even if the release already exists'
+        required: false
+        default: 'false'
+
+permissions:
+  actions: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve current stable release
+        run: |
+          RELEASES=$(curl -sfL --retry 3 "https://storage.googleapis.com/flutter_infra_release/releases/releases_linux.json")
+          STABLE_HASH=$(echo "$RELEASES" | jq -r '.current_release.stable')
+          VERSION=$(echo "$RELEASES" | jq -r --arg h "$STABLE_HASH" \
+            '[.releases[] | select(.hash == $h and .channel == "stable")][0].version')
+          if [ -z "$VERSION" ] || [ "$VERSION" = "null" ]; then
+            echo "Could not resolve stable version from releases feed"; exit 1
+          fi
+          ENGINE_HASH=$(curl -sfL --retry 3 "https://raw.githubusercontent.com/flutter/flutter/$VERSION/bin/internal/engine.version" | tr -d '[:space:]')
+          if [ -z "$ENGINE_HASH" ]; then
+            echo "Could not resolve engine.version for tag $VERSION"; exit 1
+          fi
+          echo "Current stable: $VERSION (engine $ENGINE_HASH)"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "ENGINE_HASH=$ENGINE_HASH" >> "$GITHUB_ENV"
+
+      - name: Check bucket for this release
+        run: |
+          BUCKET="${{ vars.GCP_BUCKET || 'flutter-graphite-builds' }}"
+          echo "BUCKET=$BUCKET" >> "$GITHUB_ENV"
+          if curl -sf -o /dev/null "https://storage.googleapis.com/$BUCKET/flutter_infra_release/flutter/$ENGINE_HASH/engine_stamp.json"; then
+            echo "PRESENT=true" >> "$GITHUB_ENV"
+            echo "Release $VERSION already in gs://$BUCKET — nothing to do."
+          else
+            echo "PRESENT=false" >> "$GITHUB_ENV"
+            echo "Release $VERSION not found in gs://$BUCKET."
+          fi
+
+      - name: Dispatch engine build
+        if: ${{ env.PRESENT == 'false' || github.event.inputs.force == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "Dispatching build-engines-v2 for Flutter $VERSION"
+          gh workflow run build-engines-v2.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref "${GITHUB_REF_NAME}" \
+            -f "flutter_tag=$VERSION" \
+            -f "scope=full" \
+            -f "upload_gcs=true" \
+            -f "gcp_bucket=$BUCKET" \
+            -f "apply_skia_patch=${{ vars.APPLY_SKIA_PATCH || 'false' }}"
