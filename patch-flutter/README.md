@@ -34,9 +34,8 @@ the `prepare-flock` composite action).
 
 - `patches/unicode-0600-0603-fix.patch` — Skia fix for Arabic-script
   (U+0600–U+0603) rendering: defensive cluster-table gap filling in
-  skparagraph plus a bidi-region rewrite in skunicode.
-  **WARNING: the copy in this repo is truncated** (the second hunk is
-  incomplete) and cannot be applied; the complete original needs to be
-  restored from the machine where the local production builds were made.
+  skparagraph plus a bidi-region rewrite in skunicode. (A dropped line in
+  the second hunk was repaired on 2026-07-04; verified to apply against
+  the Skia revision pinned by Flutter 3.44.4.)
 - `patches/add_slim_gclients.patch` — legacy; the slim `.gclient` files are
   now generated inline by the `prepare-flock` action.

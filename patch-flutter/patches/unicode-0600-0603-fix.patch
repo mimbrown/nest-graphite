@@ -117,6 +117,7 @@ index f38c081110..359e7ba235 100644
 +            }
 +        }
 +    }
+-        }
 -        SkUnichar u = utf8_next(&start8, end8);
 -        pos16 += SkUTF::ToUTF16(u);
 -    }
