@@ -37,6 +37,22 @@ runs:
           df -h /
         fi
 
+    # Newer Xcode images (26+) don't bundle the Metal toolchain; some runners
+    # in the macos-latest pool have it, some don't. Impeller shader compilation
+    # needs `metal`, so download the component when it's missing.
+    - name: Ensure Metal toolchain (macOS)
+      shell: bash
+      run: |
+        if [ "$RUNNER_OS" = "macOS" ]; then
+          if xcrun -f metal >/dev/null 2>&1; then
+            echo "Metal toolchain present."
+          else
+            echo "Metal toolchain missing; downloading..."
+            sudo xcodebuild -downloadComponent MetalToolchain \
+              || echo "WARNING: Metal toolchain download failed; build will fail if shaders are needed"
+          fi
+        fi
+
     - name: Clone Flutter ${{ inputs.flutter_tag }}
       shell: bash
       run: |
