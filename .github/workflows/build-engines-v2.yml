@@ -290,6 +290,19 @@ jobs:
             "$INFRA/linux-x64/artifacts.zip"
             "$INFRA/linux-x64/font-subset.zip"
           )
+          # Shared (hash-less) objects referenced via version files in the
+          # flutter checkout. Re-mirroring them every release resets their age so
+          # the bucket's lifecycle rule never deletes one still in use.
+          INTERNAL=flock-shallow/bin/internal
+          targets+=("$(cat $INTERNAL/material_fonts.version)")
+          targets+=("$(cat $INTERNAL/gradle_wrapper.version)")
+          for dep in ios-deploy libimobiledevice libimobiledeviceglue libplist libusbmuxd openssl; do
+            ver=$(cat "$INTERNAL/$dep.version" 2>/dev/null || true)
+            if [ -n "$ver" ]; then
+              targets+=("flutter_infra_release/ios-usb-dependencies/$dep/$ver/$dep.zip")
+            fi
+          done
+
           for t in "${targets[@]}"; do
             mkdir -p "staging/$(dirname "$t")"
             echo "Fetching $t"
