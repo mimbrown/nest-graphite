@@ -1,0 +1,73 @@
+name: "Publish build outputs"
+description: "Upload flutter_infra_release + download.flutter.io trees to GCS (if enabled) or as an Actions artifact"
+inputs:
+  config:
+    description: "Config name (used for artifact naming)"
+    required: true
+  staging_dir:
+    description: "Pre-staged directory in bucket layout; defaults to collecting from flock/engine/src/out"
+    required: false
+    default: ''
+  upload_gcs:
+    description: "'true' to upload to GCS"
+    required: false
+    default: 'false'
+  gcp_bucket:
+    description: "GCS bucket name"
+    required: false
+    default: ''
+  gcp_sa_key:
+    description: "GCP service account key JSON"
+    required: false
+    default: ''
+
+runs:
+  using: "composite"
+  steps:
+    - name: Stage outputs
+      shell: bash
+      run: |
+        SAFE=$(echo '${{ inputs.config }}' | tr '/' '_')
+        echo "PUBLISH_SAFE=$SAFE" >> "$GITHUB_ENV"
+        if [ -n "${{ inputs.staging_dir }}" ]; then
+          echo "PUBLISH_DIR=${{ inputs.staging_dir }}" >> "$GITHUB_ENV"
+        else
+          mkdir -p publish-staging
+          for tree in flutter_infra_release download.flutter.io; do
+            if [ -d "flock/engine/src/out/$tree" ]; then
+              cp -R "flock/engine/src/out/$tree" publish-staging/
+            fi
+          done
+          echo "PUBLISH_DIR=publish-staging" >> "$GITHUB_ENV"
+        fi
+        echo "Staged files:"
+        find "${{ inputs.staging_dir }}" publish-staging -type f 2>/dev/null | head -50 || true
+
+    - name: Authenticate to GCP
+      if: ${{ inputs.upload_gcs == 'true' }}
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ inputs.gcp_sa_key }}
+
+    - name: Set up gcloud
+      if: ${{ inputs.upload_gcs == 'true' }}
+      uses: google-github-actions/setup-gcloud@v2
+
+    - name: Upload to GCS
+      if: ${{ inputs.upload_gcs == 'true' }}
+      shell: bash
+      run: |
+        if [ -z "$(find "$PUBLISH_DIR" -type f 2>/dev/null | head -1)" ]; then
+          echo "Nothing to upload."
+          exit 0
+        fi
+        gcloud storage cp -r "$PUBLISH_DIR"/* "gs://${{ inputs.gcp_bucket }}/"
+
+    - name: Upload as artifact
+      if: ${{ inputs.upload_gcs != 'true' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: outputs-${{ runner.os }}-${{ env.PUBLISH_SAFE }}
+        path: ${{ env.PUBLISH_DIR }}
+        if-no-files-found: warn
+        retention-days: 7

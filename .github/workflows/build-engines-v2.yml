@@ -1,0 +1,306 @@
+name: Build Engines v2
+
+# Builds the Graphite-enabled engine artifact set that production consumes
+# (derived from the gs://flutter-graphite-builds manifest):
+#   - Linux job:  Android artifacts.zip / symbols / embedder / AARs
+#   - Mac jobs:   iOS + macOS configs, android gen_snapshot hosts (darwin-x64.zip)
+#   - Frameworks: assembles FlutterMacOS/Flutter xcframeworks + gen_snapshots
+#                 from tarred out-dirs (tar preserves exec bits across jobs)
+#   - Backfill:   stock upstream artifacts that don't need Graphite
+#
+# Each job prepares its own checkout (slim gclient sync is ~2 min on these
+# runners) — no giant prepared-tree artifact handoffs.
+#
+# GCS upload requires the GCP_SA_KEY repo secret and upload_gcs=true.
+
+on:
+  workflow_dispatch:
+    inputs:
+      flutter_tag:
+        description: 'Flutter tag/branch to build'
+        required: true
+        default: '3.44.4'
+      scope:
+        description: 'smoke (iOS debug set + frameworks) or full (everything)'
+        required: true
+        default: 'smoke'
+      apply_skia_patch:
+        description: 'Apply the Skia unicode patch (repo copy currently truncated)'
+        required: false
+        default: 'false'
+      upload_gcs:
+        description: 'Upload to GCS (requires GCP_SA_KEY secret)'
+        required: false
+        default: 'false'
+      gcp_bucket:
+        description: 'GCS bucket name'
+        required: false
+        default: 'flutter-graphite-builds'
+      graphite_ref:
+        description: 'silnrsi/graphite ref to build against'
+        required: false
+        default: 'ca8d821e60a15b6c24e404c9086992c975d8e1cf'
+
+env:
+  FLUTTER_TAG: ${{ github.event.inputs.flutter_tag }}
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      linux_matrix: ${{ steps.m.outputs.linux }}
+      mac_matrix: ${{ steps.m.outputs.mac }}
+    steps:
+      - id: m
+        run: |
+          if [ "${{ github.event.inputs.scope }}" = "full" ]; then
+            linux='[
+              {"config":"ci/android_debug","platform":"androidlinux"},
+              {"config":"ci/android_debug_arm64","platform":"androidlinux"},
+              {"config":"ci/android_debug_x64","platform":"androidlinux"},
+              {"config":"ci/android_profile","platform":"androidlinux"},
+              {"config":"ci/android_profile_arm64","platform":"androidlinux"},
+              {"config":"ci/android_profile_x64","platform":"androidlinux"},
+              {"config":"ci/android_release","platform":"androidlinux"},
+              {"config":"ci/android_release_arm64","platform":"androidlinux"},
+              {"config":"ci/android_release_x64","platform":"androidlinux"}
+            ]'
+            mac='[
+              {"config":"ci/ios_debug","platform":"ios","save_out":true},
+              {"config":"ci/ios_debug_sim","platform":"ios","save_out":true},
+              {"config":"ci/ios_debug_sim_arm64","platform":"ios","save_out":true},
+              {"config":"ci/ios_profile","platform":"ios","save_out":true},
+              {"config":"ci/ios_release","platform":"ios","save_out":true},
+              {"config":"ci/mac_debug_arm64","platform":"mac","save_out":false},
+              {"config":"ci/mac_debug_framework_arm64","platform":"mac","save_out":true},
+              {"config":"ci/mac_debug_gen_snapshot_arm64","platform":"mac","save_out":true},
+              {"config":"ci/mac_profile_arm64","platform":"mac","save_out":false},
+              {"config":"ci/mac_profile_framework_arm64","platform":"mac","save_out":true},
+              {"config":"ci/mac_profile_gen_snapshot_arm64","platform":"mac","save_out":true},
+              {"config":"ci/mac_release_arm64","platform":"mac","save_out":false},
+              {"config":"ci/mac_release_framework_arm64","platform":"mac","save_out":true},
+              {"config":"ci/mac_release_gen_snapshot_arm64","platform":"mac","save_out":true},
+              {"config":"ci/host_debug","platform":"mac","save_out":false},
+              {"config":"ci/host_debug_framework","platform":"mac","save_out":true},
+              {"config":"ci/host_debug_gen_snapshot","platform":"mac","save_out":true},
+              {"config":"ci/host_profile","platform":"mac","save_out":false},
+              {"config":"ci/host_profile_framework","platform":"mac","save_out":true},
+              {"config":"ci/host_profile_gen_snapshot","platform":"mac","save_out":true},
+              {"config":"ci/host_release","platform":"mac","save_out":false},
+              {"config":"ci/host_release_framework","platform":"mac","save_out":true},
+              {"config":"ci/host_release_gen_snapshot","platform":"mac","save_out":true},
+              {"config":"android_debug_arm64","platform":"android","save_out":false},
+              {"config":"ci/android_profile","platform":"android","save_out":false},
+              {"config":"ci/android_profile_arm64","platform":"android","save_out":false},
+              {"config":"ci/android_profile_x64","platform":"android","save_out":false},
+              {"config":"ci/android_release","platform":"android","save_out":false},
+              {"config":"ci/android_release_arm64","platform":"android","save_out":false},
+              {"config":"ci/android_release_x64","platform":"android","save_out":false}
+            ]'
+          else
+            linux='[]'
+            mac='[
+              {"config":"ci/ios_debug","platform":"ios","save_out":true},
+              {"config":"ci/ios_debug_sim","platform":"ios","save_out":true},
+              {"config":"ci/ios_debug_sim_arm64","platform":"ios","save_out":true}
+            ]'
+          fi
+          echo "linux=$(echo $linux | tr -d '\n ')" >> "$GITHUB_OUTPUT"
+          echo "mac=$(echo $mac | tr -d '\n ')" >> "$GITHUB_OUTPUT"
+
+  build-linux:
+    needs: plan
+    if: needs.plan.outputs.linux_matrix != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.linux_matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare flock
+        uses: ./.github/actions/prepare-flock
+        with:
+          flutter_tag: ${{ github.event.inputs.flutter_tag }}
+          platform: ${{ matrix.platform }}
+          graphite_ref: ${{ github.event.inputs.graphite_ref }}
+          apply_skia_patch: ${{ github.event.inputs.apply_skia_patch }}
+
+      - name: Build ${{ matrix.config }}
+        run: |
+          chmod +x local-build-tools/build_engine.sh
+          ./local-build-tools/build_engine.sh build --platform "${{ matrix.platform }}" --config "${{ matrix.config }}"
+
+      - name: Publish outputs
+        uses: ./.github/actions/publish-outputs
+        with:
+          config: ${{ matrix.config }}
+          upload_gcs: ${{ github.event.inputs.upload_gcs }}
+          gcp_bucket: ${{ github.event.inputs.gcp_bucket }}
+          gcp_sa_key: ${{ secrets.GCP_SA_KEY }}
+
+  build-mac:
+    needs: plan
+    if: needs.plan.outputs.mac_matrix != '[]'
+    runs-on: macos-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.mac_matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare flock
+        uses: ./.github/actions/prepare-flock
+        with:
+          flutter_tag: ${{ github.event.inputs.flutter_tag }}
+          platform: ${{ matrix.platform }}
+          graphite_ref: ${{ github.event.inputs.graphite_ref }}
+          apply_skia_patch: ${{ github.event.inputs.apply_skia_patch }}
+
+      - name: Build ${{ matrix.config }}
+        run: |
+          chmod +x local-build-tools/build_engine.sh
+          ./local-build-tools/build_engine.sh build --platform "${{ matrix.platform }}" --config "${{ matrix.config }}"
+
+      - name: Sanitize config name
+        if: always()
+        run: echo "CONFIG_SAFE=$(echo '${{ matrix.config }}' | tr '/' '_')" >> "$GITHUB_ENV"
+
+      # Framework assembly needs this config's raw out-dir on another runner.
+      # tar preserves symlinks and exec bits that upload-artifact alone would drop.
+      - name: Save out-dir for frameworks job
+        if: ${{ matrix.save_out }}
+        run: tar -C flock/engine/src -czf "outdir-${CONFIG_SAFE}.tgz" "out/${{ matrix.config }}"
+
+      - name: Upload out-dir
+        if: ${{ matrix.save_out }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: outdir-${{ env.CONFIG_SAFE }}
+          path: outdir-${{ env.CONFIG_SAFE }}.tgz
+          retention-days: 3
+
+      - name: Publish outputs
+        uses: ./.github/actions/publish-outputs
+        with:
+          config: ${{ matrix.config }}
+          upload_gcs: ${{ github.event.inputs.upload_gcs }}
+          gcp_bucket: ${{ github.event.inputs.gcp_bucket }}
+          gcp_sa_key: ${{ secrets.GCP_SA_KEY }}
+
+  frameworks:
+    needs: [plan, build-mac]
+    runs-on: macos-latest
+    timeout-minutes: 350
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare flock
+        uses: ./.github/actions/prepare-flock
+        with:
+          flutter_tag: ${{ github.event.inputs.flutter_tag }}
+          platform: mac
+          graphite_ref: ${{ github.event.inputs.graphite_ref }}
+          apply_skia_patch: ${{ github.event.inputs.apply_skia_patch }}
+
+      - name: Download out-dirs
+        uses: actions/download-artifact@v4
+        with:
+          pattern: outdir-*
+          path: outdirs
+          merge-multiple: true
+
+      - name: Restore out-dirs
+        run: |
+          for f in outdirs/*.tgz; do
+            echo "Restoring $f"
+            tar -C flock/engine/src -xzf "$f"
+          done
+          ls flock/engine/src/out/ flock/engine/src/out/ci/ 2>/dev/null || true
+
+      - name: Create frameworks
+        run: |
+          chmod +x local-build-tools/build_engine.sh
+          ./local-build-tools/build_engine.sh framework
+
+      - name: Verify Graphite in frameworks
+        run: |
+          found=0
+          for bin in flock/engine/src/out/ios/Flutter.xcframework/ios-arm64/Flutter.framework/Flutter \
+                     flock/engine/src/out/debug/framework/FlutterMacOS.framework/Versions/A/FlutterMacOS; do
+            if [ -f "$bin" ]; then
+              hits=$(strings -a "$bin" | grep -c graphite || true)
+              echo "$bin: $hits graphite string(s)"
+              if [ "${hits:-0}" -gt 0 ]; then found=1; fi
+            fi
+          done
+          if [ "$found" -eq 0 ]; then
+            echo "WARNING: no graphite strings found in framework binaries"
+          fi
+
+      - name: Publish outputs
+        uses: ./.github/actions/publish-outputs
+        with:
+          config: frameworks
+          upload_gcs: ${{ github.event.inputs.upload_gcs }}
+          gcp_bucket: ${{ github.event.inputs.gcp_bucket }}
+          gcp_sa_key: ${{ secrets.GCP_SA_KEY }}
+
+  # Stock upstream artifacts that don't contain the engine renderer and can be
+  # mirrored as-is from Google's bucket (same engine hash).
+  backfill:
+    if: ${{ github.event.inputs.scope == 'full' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve engine hash
+        run: |
+          git clone --depth=1 --branch "$FLUTTER_TAG" https://github.com/flutter/flutter.git flock-shallow
+          echo "ENGINE_HASH=$(cat flock-shallow/bin/internal/engine.version)" >> "$GITHUB_ENV"
+
+      - name: Download stock artifacts
+        run: |
+          INFRA="flutter_infra_release/flutter/$ENGINE_HASH"
+          mkdir -p staging
+          targets=(
+            "$INFRA/engine_stamp.json"
+            "$INFRA/sky_engine.zip"
+            "$INFRA/flutter_patched_sdk.zip"
+            "$INFRA/flutter_patched_sdk_product.zip"
+            "$INFRA/flutter_gpu.zip"
+            "$INFRA/flutter-web-sdk.zip"
+            "$INFRA/android-javadoc.zip"
+            "$INFRA/android-x86/artifacts.zip"
+            "$INFRA/android-x64/artifacts.zip"
+            "$INFRA/dart-sdk-darwin-arm64.zip"
+            "$INFRA/dart-sdk-darwin-x64.zip"
+            "$INFRA/dart-sdk-linux-x64.zip"
+            "$INFRA/dart-sdk-windows-x64.zip"
+            "$INFRA/linux-x64/artifacts.zip"
+            "$INFRA/linux-x64/font-subset.zip"
+          )
+          for t in "${targets[@]}"; do
+            mkdir -p "staging/$(dirname "$t")"
+            echo "Fetching $t"
+            curl -sfL --retry 3 -o "staging/$t" "https://storage.googleapis.com/$t" \
+              || echo "WARNING: missing upstream $t"
+          done
+          find staging -type f | sed 's|^staging/||'
+
+      - name: Publish outputs
+        uses: ./.github/actions/publish-outputs
+        with:
+          config: backfill
+          staging_dir: staging
+          upload_gcs: ${{ github.event.inputs.upload_gcs }}
+          gcp_bucket: ${{ github.event.inputs.gcp_bucket }}
+          gcp_sa_key: ${{ secrets.GCP_SA_KEY }}
