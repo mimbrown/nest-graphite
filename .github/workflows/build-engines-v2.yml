@@ -219,9 +219,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Framework packaging only needs the flutter repo's sky/tools scripts and
-      # the restored out-dirs — not the 13 GB dependency tree. Skipping the sync
-      # leaves the disk for the out-dirs.
+      # Framework packaging needs the synced checkout's toolchain
+      # (buildtools/.../dsymutil for --dsym). Disk fits because the restored
+      # out-dirs exclude obj/ intermediates (36 GB instead of ~80 GB).
       - name: Prepare flock
         uses: ./.github/actions/prepare-flock
         with:
@@ -229,7 +229,6 @@ jobs:
           platform: mac
           graphite_ref: ${{ github.event.inputs.graphite_ref }}
           apply_skia_patch: ${{ github.event.inputs.apply_skia_patch }}
-          gclient_sync: 'false'
 
       # Restore out-dirs one artifact at a time (download → extract → delete)
       # so the compressed tarballs never accumulate on disk. obj/ is excluded
@@ -261,6 +260,37 @@ jobs:
         run: |
           chmod +x local-build-tools/build_engine.sh
           ./local-build-tools/build_engine.sh framework
+
+      # build_engine_local.py swallows framework-creation errors (logged, not
+      # fatal), so assert the expected outputs exist before anything publishes.
+      - name: Assert expected framework artifacts
+        run: |
+          HASH=$(cat flock/bin/internal/engine.version)
+          BASE="flock/engine/src/out/flutter_infra_release/flutter/$HASH"
+          expected="ios/artifacts.zip"
+          if [ "${{ github.event.inputs.scope }}" = "full" ] || [ -n "${{ github.event.inputs.frameworks_from_run }}" ]; then
+            expected="
+              ios/artifacts.zip
+              ios-profile/artifacts.zip
+              ios-release/artifacts.zip
+              darwin-x64/FlutterMacOS.framework.zip
+              darwin-x64/FlutterEmbedder.framework.zip
+              darwin-x64/framework.zip
+              darwin-x64/gen_snapshot.zip
+              darwin-x64-profile/FlutterMacOS.framework.zip
+              darwin-x64-profile/gen_snapshot.zip
+              darwin-x64-release/FlutterMacOS.framework.zip
+              darwin-x64-release/gen_snapshot.zip
+            "
+          fi
+          missing=0
+          for f in $expected; do
+            if [ -f "$BASE/$f" ]; then echo "OK   $f"; else echo "MISSING $f"; missing=1; fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            echo "Framework assembly incomplete — failing before publish."
+            exit 1
+          fi
 
       - name: Verify Graphite in frameworks
         run: |
