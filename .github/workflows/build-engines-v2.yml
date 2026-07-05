@@ -40,6 +40,10 @@ on:
         description: 'silnrsi/graphite ref to build against'
         required: false
         default: 'ca8d821e60a15b6c24e404c9086992c975d8e1cf'
+      frameworks_from_run:
+        description: 'Recovery mode: skip builds, assemble frameworks from this run ID''s outdir artifacts'
+        required: false
+        default: ''
 
 env:
   FLUTTER_TAG: ${{ github.event.inputs.flutter_tag }}
@@ -53,6 +57,12 @@ jobs:
     steps:
       - id: m
         run: |
+          if [ -n "${{ github.event.inputs.frameworks_from_run }}" ]; then
+            # Recovery mode: no builds, frameworks job pulls artifacts from the given run.
+            echo "linux=[]" >> "$GITHUB_OUTPUT"
+            echo "mac=[]" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           if [ "${{ github.event.inputs.scope }}" = "full" ]; then
             linux='[
               {"config":"ci/android_debug","platform":"androidlinux"},
@@ -174,9 +184,15 @@ jobs:
 
       # Framework assembly needs this config's raw out-dir on another runner.
       # tar preserves symlinks and exec bits that upload-artifact alone would drop.
+      # obj/ (compile intermediates) is the bulk of an out-dir and is never
+      # needed for packaging — excluding it keeps the frameworks runner's disk alive.
       - name: Save out-dir for frameworks job
         if: ${{ matrix.save_out }}
-        run: tar -C flock/engine/src -czf "outdir-${CONFIG_SAFE}.tgz" "out/${{ matrix.config }}"
+        run: |
+          tar -C flock/engine/src -czf "outdir-${CONFIG_SAFE}.tgz" \
+            --exclude='*/obj' --exclude='*/obj/*' \
+            "out/${{ matrix.config }}"
+          ls -lh "outdir-${CONFIG_SAFE}.tgz"
 
       - name: Upload out-dir
         if: ${{ matrix.save_out }}
@@ -196,12 +212,16 @@ jobs:
 
   frameworks:
     needs: [plan, build-mac]
+    if: ${{ !cancelled() && (needs.build-mac.result == 'success' || github.event.inputs.frameworks_from_run != '') }}
     runs-on: macos-latest
     timeout-minutes: 350
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Framework packaging only needs the flutter repo's sky/tools scripts and
+      # the restored out-dirs — not the 13 GB dependency tree. Skipping the sync
+      # leaves the disk for the out-dirs.
       - name: Prepare flock
         uses: ./.github/actions/prepare-flock
         with:
@@ -209,21 +229,33 @@ jobs:
           platform: mac
           graphite_ref: ${{ github.event.inputs.graphite_ref }}
           apply_skia_patch: ${{ github.event.inputs.apply_skia_patch }}
+          gclient_sync: 'false'
 
-      - name: Download out-dirs
-        uses: actions/download-artifact@v4
-        with:
-          pattern: outdir-*
-          path: outdirs
-          merge-multiple: true
-
+      # Restore out-dirs one artifact at a time (download → extract → delete)
+      # so the compressed tarballs never accumulate on disk. obj/ is excluded
+      # again on extraction so artifacts from runs predating the slim tars
+      # (recovery mode) also unpack lean.
       - name: Restore out-dirs
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          for f in outdirs/*.tgz; do
-            echo "Restoring $f"
-            tar -C flock/engine/src -xzf "$f"
+          SRC_RUN="${{ github.event.inputs.frameworks_from_run }}"
+          if [ -z "$SRC_RUN" ]; then SRC_RUN="${{ github.run_id }}"; fi
+          echo "Restoring outdir artifacts from run $SRC_RUN"
+          names=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SRC_RUN/artifacts?per_page=100" \
+            --paginate --jq '.artifacts[] | select(.name | startswith("outdir-")) | .name' | sort -u)
+          if [ -z "$names" ]; then
+            echo "No outdir artifacts found in run $SRC_RUN"; exit 1
+          fi
+          for name in $names; do
+            echo "=== $name"
+            gh run download "$SRC_RUN" --repo "$GITHUB_REPOSITORY" -n "$name" -D art-tmp
+            tar -C flock/engine/src -xzf art-tmp/*.tgz --exclude='*/obj' --exclude='*/obj/*'
+            rm -rf art-tmp
+            df -h / | tail -1
           done
-          ls flock/engine/src/out/ flock/engine/src/out/ci/ 2>/dev/null || true
+          echo "=== restored:"
+          du -sh flock/engine/src/out/* 2>/dev/null || true
 
       - name: Create frameworks
         run: |
@@ -326,7 +358,16 @@ jobs:
   # failed run is invisible to consumers and simply retries next time.
   release:
     needs: [build-linux, build-mac, frameworks, backfill]
-    if: ${{ github.event.inputs.upload_gcs == 'true' && github.event.inputs.scope == 'full' }}
+    # Runs for a full build, or in recovery mode (frameworks_from_run) where the
+    # build jobs were intentionally skipped because their outputs already shipped.
+    if: >-
+      ${{ !cancelled()
+          && github.event.inputs.upload_gcs == 'true'
+          && (github.event.inputs.scope == 'full' || github.event.inputs.frameworks_from_run != '')
+          && needs.frameworks.result == 'success'
+          && needs.build-linux.result != 'failure'
+          && needs.build-mac.result != 'failure'
+          && needs.backfill.result != 'failure' }}
     runs-on: ubuntu-latest
     steps:
       - name: Resolve engine hash

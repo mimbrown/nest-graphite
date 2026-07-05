@@ -14,6 +14,10 @@ inputs:
     description: "Apply the Skia unicode patch ('true'/'false')"
     required: false
     default: 'false'
+  gclient_sync:
+    description: "Run gclient sync ('true'/'false'). Jobs that only package existing build outputs don't need the 13 GB dependency tree."
+    required: false
+    default: 'true'
 
 runs:
   using: "composite"
@@ -62,6 +66,9 @@ runs:
     - name: Write slim .gclient
       shell: bash
       run: |
+        if [ "${{ inputs.gclient_sync }}" != "true" ]; then
+          echo "Skipping .gclient (gclient_sync=false)"; exit 0
+        fi
         case "${{ inputs.platform }}" in
           # Android-on-Linux needs the Debian sysroot for host (clang_x64) tools,
           # which is gated behind download_linux_deps.
@@ -101,6 +108,9 @@ runs:
     - name: Set up depot_tools
       shell: bash
       run: |
+        if [ "${{ inputs.gclient_sync }}" != "true" ]; then
+          echo "Skipping depot_tools (gclient_sync=false)"; exit 0
+        fi
         git clone --depth=1 https://chromium.googlesource.com/chromium/tools/depot_tools.git "$HOME/depot_tools"
         echo "$HOME/depot_tools" >> "$GITHUB_PATH"
 
@@ -109,6 +119,9 @@ runs:
       env:
         DEPOT_TOOLS_UPDATE: '0'
       run: |
+        if [ "${{ inputs.gclient_sync }}" != "true" ]; then
+          echo "Skipping gclient sync (gclient_sync=false)"; exit 0
+        fi
         cd flock
         gclient sync -D --no-history -j8
         du -sh "$GITHUB_WORKSPACE/flock" || true
@@ -130,6 +143,9 @@ runs:
     - name: Apply Skia unicode patch
       shell: bash
       run: |
+        if [ ! -d flock/engine/src/flutter/third_party/skia ]; then
+          echo "Skia checkout absent (no gclient sync) — skipping patch"; exit 0
+        fi
         if [ "${{ inputs.apply_skia_patch }}" = "true" ]; then
           git -C flock/engine/src/flutter/third_party/skia apply -v \
             "$GITHUB_WORKSPACE/patch-flutter/patches/unicode-0600-0603-fix.patch"
