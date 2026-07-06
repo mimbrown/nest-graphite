@@ -21,6 +21,7 @@ on:
 
 permissions:
   actions: write
+  issues: write
 
 jobs:
   check:
@@ -69,3 +70,21 @@ jobs:
             -f "upload_gcs=true" \
             -f "gcp_bucket=$BUCKET" \
             -f "apply_skia_patch=${{ vars.APPLY_SKIA_PATCH || 'false' }}"
+
+      - name: Open issue if the check itself failed
+        # The cron actor is the bot, so nobody gets emailed about failures here.
+        if: ${{ failure() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          TITLE="Daily Flutter release check failed"
+          BODY="The daily stable-release check errored (releases feed or engine.version lookup). New Flutter releases will not be detected until this is fixed.
+
+          Run: $RUN_URL"
+          EXISTING=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "in:title \"$TITLE\"" --json number --jq '.[0].number // empty')
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --repo "$GITHUB_REPOSITORY" --body "$BODY"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --body "$BODY"
+          fi
