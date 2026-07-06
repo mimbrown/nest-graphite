@@ -1,10 +1,8 @@
 # Mac files.
 .DS_Store
 
-# python cache
-tools/lib/__pycache__/
-
 # Ignore flock so we don't accidently commit it
 flock
-!flock/.gclient
+
+# python cache
 /local-build-tools/__pycache__
