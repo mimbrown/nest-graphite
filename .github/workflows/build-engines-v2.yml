@@ -72,6 +72,16 @@ jobs:
           fi
           if [ "${{ github.event.inputs.scope }}" = "full" ]; then
             linux='[
+              {"config":"ci/linux_debug_arm64","platform":"linux"},
+              {"config":"ci/linux_profile_arm64","platform":"linux"}
+              {"config":"ci/linux_release_arm64","platform":"linux"}
+              {"config":"ci/host_debug","platform":"linux"}
+              {"config":"ci/host_debug_clang_tidy","platform":"linux"}
+              {"config":"ci/host_debug_desktop","platform":"linux"}
+              {"config":"ci/host_debug_unopt","platform":"linux"}
+              {"config":"ci/host_release","platform":"linux"}
+              {"config":"ci/host_release_desktop","platform":"linux"}
+              {"config":"ci/host_release_licenses","platform":"linux"}
               {"config":"ci/android_debug","platform":"androidlinux"},
               {"config":"ci/android_debug_arm64","platform":"androidlinux"},
               {"config":"ci/android_debug_x64","platform":"androidlinux"},
@@ -111,22 +121,15 @@ jobs:
               {"config":"ci/host_release","platform":"mac","save_out":false},
               {"config":"ci/host_release_framework","platform":"mac","save_out":true},
               {"config":"ci/host_release_gen_snapshot","platform":"mac","save_out":true},
-              {"config":"android_debug_arm64","platform":"android","save_out":false},
-              {"config":"ci/android_profile","platform":"android","save_out":false},
-              {"config":"ci/android_profile_arm64","platform":"android","save_out":false},
-              {"config":"ci/android_profile_x64","platform":"android","save_out":false},
-              {"config":"ci/android_release","platform":"android","save_out":false},
-              {"config":"ci/android_release_arm64","platform":"android","save_out":false},
-              {"config":"ci/android_release_x64","platform":"android","save_out":false}
             ]'
             windows='[
-              {"config":"ci/android_profile","platform":"android"},
-              {"config":"ci/android_profile_arm64","platform":"android"},
-              {"config":"ci/android_profile_x64","platform":"android"},
-              {"config":"ci/android_release","platform":"android"},
-              {"config":"ci/android_release_arm64","platform":"android"},
-              {"config":"ci/android_release_x64","platform":"android"}
-			]'
+              {"config":"ci/host_debug","platform":"windows"},
+              {"config":"ci/host_profile","platform":"windows"},
+              {"config":"ci/host_release","platform":"windows"},
+              {"config":"ci/host_debug_arm64","platform":"windows"},
+              {"config":"ci/host_profile_arm64","platform":"windows"},
+              {"config":"ci/host_release_arm64","platform":"windows"},
+            ]'
           else
             linux='[]'
             mac='[
@@ -138,6 +141,7 @@ jobs:
           fi
           echo "linux=$(echo $linux | tr -d '\n ')" >> "$GITHUB_OUTPUT"
           echo "mac=$(echo $mac | tr -d '\n ')" >> "$GITHUB_OUTPUT"
+          echo "windows=$(echo $windows | tr -d '\n ')" >> "$GITHUB_OUTPUT"
 
   build-linux:
     needs: plan
@@ -412,14 +416,10 @@ jobs:
             "$INFRA/flutter_gpu.zip"
             "$INFRA/flutter-web-sdk.zip"
             "$INFRA/android-javadoc.zip"
-            "$INFRA/android-x86/artifacts.zip"
-            "$INFRA/android-x64/artifacts.zip"
             "$INFRA/dart-sdk-darwin-arm64.zip"
             "$INFRA/dart-sdk-darwin-x64.zip"
             "$INFRA/dart-sdk-linux-x64.zip"
             "$INFRA/dart-sdk-windows-x64.zip"
-            "$INFRA/linux-x64/artifacts.zip"
-            "$INFRA/linux-x64/font-subset.zip"
           )
           # Shared (hash-less) objects referenced via version files in the
           # flutter checkout. Re-mirroring them every release resets their age so
@@ -456,7 +456,7 @@ jobs:
   # gated on every build/framework/backfill job succeeding — means a partially
   # failed run is invisible to consumers and simply retries next time.
   release:
-    needs: [build-linux, build-mac, frameworks, backfill]
+    needs: [build-linux, build-mac, build-windows, frameworks, backfill]
     # Runs for a full build, or in recovery mode (frameworks_from_run) where the
     # build jobs were intentionally skipped because their outputs already shipped.
     if: >-
@@ -466,6 +466,7 @@ jobs:
           && needs.frameworks.result == 'success'
           && needs.build-linux.result != 'failure'
           && needs.build-mac.result != 'failure'
+          && needs.build-windows.result != 'failure'
           && needs.backfill.result != 'failure' }}
     runs-on: ubuntu-latest
     steps:
@@ -498,7 +499,7 @@ jobs:
     # Production runs are usually dispatched by the daily checker, whose actor
     # is the Actions bot — GitHub emails nobody when they fail. Surface the
     # failure as an issue so it can't sit unnoticed until the release is needed.
-    needs: [plan, build-linux, build-mac, frameworks, backfill, release]
+    needs: [plan, build-linux, build-mac, buid-windows, frameworks, backfill, release]
     if: >-
       ${{ !cancelled()
           && github.event.inputs.upload_gcs == 'true'
