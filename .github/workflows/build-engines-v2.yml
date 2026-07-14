@@ -4,6 +4,7 @@ name: Build Engines v2
 # (derived from the gs://flutter-graphite-builds manifest):
 #   - Linux job:  Android artifacts.zip / symbols / embedder / AARs
 #   - Mac jobs:   iOS + macOS configs, android gen_snapshot hosts (darwin-x64.zip)
+#   - Windows jobs: Android in x64 and ARM
 #   - Frameworks: assembles FlutterMacOS/Flutter xcframeworks + gen_snapshots
 #                 from tarred out-dirs (tar preserves exec bits across jobs)
 #   - Backfill:   stock upstream artifacts that don't need Graphite
@@ -58,6 +59,7 @@ jobs:
     outputs:
       linux_matrix: ${{ steps.m.outputs.linux }}
       mac_matrix: ${{ steps.m.outputs.mac }}
+	  windows_matrix: ${{ steps.m.outputs.windows }}
     steps:
       - id: m
         run: |
@@ -117,6 +119,14 @@ jobs:
               {"config":"ci/android_release_arm64","platform":"android","save_out":false},
               {"config":"ci/android_release_x64","platform":"android","save_out":false}
             ]'
+            windows='[
+              {"config":"ci/android_profile","platform":"android"},
+              {"config":"ci/android_profile_arm64","platform":"android"},
+              {"config":"ci/android_profile_x64","platform":"android"},
+              {"config":"ci/android_release","platform":"android"},
+              {"config":"ci/android_release_arm64","platform":"android"},
+              {"config":"ci/android_release_x64","platform":"android"}
+			]'
           else
             linux='[]'
             mac='[
@@ -124,6 +134,7 @@ jobs:
               {"config":"ci/ios_debug_sim","platform":"ios","save_out":true},
               {"config":"ci/ios_debug_sim_arm64","platform":"ios","save_out":true}
             ]'
+            windows='[]'
           fi
           echo "linux=$(echo $linux | tr -d '\n ')" >> "$GITHUB_OUTPUT"
           echo "mac=$(echo $mac | tr -d '\n ')" >> "$GITHUB_OUTPUT"
@@ -334,6 +345,41 @@ jobs:
         uses: ./.github/actions/publish-outputs
         with:
           config: frameworks
+          upload_gcs: ${{ github.event.inputs.upload_gcs }}
+          gcp_bucket: ${{ github.event.inputs.gcp_bucket }}
+          gcp_sa_key: ${{ secrets.GCP_SA_KEY }}
+
+  build-windows:
+    needs: plan
+    if: needs.plan.outputs.windows_matrix != '[]'
+    runs-on: ${{ matrix-os }}
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.windows_matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare flock
+        uses: ./.github/actions/prepare-flock
+        with:
+          flutter_tag: ${{ github.event.inputs.flutter_tag }}
+          platform: ${{ matrix.platform }}
+          graphite_ref: ${{ github.event.inputs.graphite_ref }}
+          apply_skia_patch: ${{ github.event.inputs.apply_skia_patch }}
+
+      - name: Build ${{ matrix.config }}
+	    shell: bash
+        run: |
+          chmod +x local-build-tools/build_engine.sh
+          ./local-build-tools/build_engine.sh build --platform "${{ matrix.platform }}" --config "${{ matrix.config }}"
+
+      - name: Publish outputs
+        uses: ./.github/actions/publish-outputs
+        with:
+          config: ${{ matrix.config }}
           upload_gcs: ${{ github.event.inputs.upload_gcs }}
           gcp_bucket: ${{ github.event.inputs.gcp_bucket }}
           gcp_sa_key: ${{ secrets.GCP_SA_KEY }}

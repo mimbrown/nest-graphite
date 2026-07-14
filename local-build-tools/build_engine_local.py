@@ -22,6 +22,8 @@ class Platform(Enum):
     IOS = "ios"
     ANDROID = "android"
     ANDROIDLINUX = "androidlinux"
+    ANDROIDWINDOWS = "androidwindows"
+    WINDOWS = "windows"
     LINUX = "linux"
     WEB = "web"
 
@@ -142,6 +144,26 @@ class FlutterEngineBuilder:
         BuildConfig("linux host release", "ci/host_release", Platform.LINUX),
         BuildConfig("linux host release desktop", "ci/host_release_desktop", Platform.LINUX),
         BuildConfig("linux host release licenses", "ci/host_release_licenses", Platform.LINUX),
+    ]
+    
+    #Windows build configurations
+    WINDOWS_CONFIGS = [
+        BuildConfig("windows host debug", "ci/host_debug", Platform.WINDOWS),
+        BuildConfig("windows host profile", "ci/host_profile", Platform.WINDOWS),
+        BuildConfig("windows host release", "ci/host_release", Platform.WINDOWS),
+        BuildConfig("windows host debug arm64", "ci/host_debug_arm64", Platform.WINDOWS),
+        BuildConfig("windows host profile arm64", "ci/host_profile_arm64", Platform.WINDOWS),
+        BuildConfig("windows host release arm64", "ci/host_release_arm64", Platform.WINDOWS),
+    ]
+    
+    #Android build configurations (Windows runners)
+    ANDROID_WINDOWS_CONFIGS = [
+        BuildConfig("windows android profile", "ci/android_profile", Platform.ANDROID),
+        BuildConfig("windows android profile arm64", "ci/android_profile_arm64", Platform.ANDROID),
+        BuildConfig("windows android profile x64", "ci/android_profile_x64", Platform.ANDROID),
+        BuildConfig("windows android release", "ci/android_release", Platform.ANDROID),
+        BuildConfig("windows android release arm64", "ci/android_release_arm64", Platform.ANDROID),
+        BuildConfig("windows android release x64", "ci/android_release_x64", Platform.ANDROID),
     ]
     
     # Web/WASM build configurations (can be built on macOS and Linux)
@@ -574,6 +596,9 @@ class FlutterEngineBuilder:
             Platform.IOS: self.IOS_CONFIGS,
             Platform.ANDROID: self.ANDROID_MAC_CONFIGS,
             Platform.ANDROIDLINUX: self.ANDROID_LINUX_CONFIGS,
+            Platform.ANDROIDWINDOWS: self.ANDROID_WINDOWS_CONFIGS,
+            Platform.LINUX: self.LINUX_CONFIGS,
+            Platform.WINDOWS: self.WINDOWS_CONFIGS,
             Platform.WEB: self.WEB_CONFIGS,
         }
         
@@ -635,7 +660,7 @@ Examples:
     
     parser.add_argument(
         "--platform",
-        choices=["mac", "ios", "android", "androidlinux", "linux", "web"],
+        choices=["mac", "ios", "android", "androidlinux", "linux", "androidwindows", "windows", "web"],
         help="Target platform to build"
     )
     
@@ -716,6 +741,12 @@ Examples:
             configs = builder.ANDROID_MAC_CONFIGS
         elif args.platform == "androidlinux":
             configs = builder.ANDROID_LINUX_CONFIGS
+        elif args.platform == "androidwinodws":
+            configs = builder.ANDROID_WINDOWS_CONFIGS
+        elif args.platform == "linux":
+            configs = builder.LINUX_CONFIGS
+        elif args.platform == "winodws":
+            configs = builder.WINDOWS_CONFIGS
         elif args.platform == "web":
             configs = builder.WEB_CONFIGS
         else:
