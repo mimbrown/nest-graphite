@@ -38,7 +38,7 @@ COMMANDS:
     help                Show this help message
 
 OPTIONS for 'build' command:
-    --platform PLATFORM     Target platform: mac, ios, android, androidlinux, linux, web
+    --platform PLATFORM     Target platform: mac, ios, android, androidlinux, androidwindows, linux, windows, web
     --config CONFIG         Specific configuration to build
     --all                   Build all configurations for the platform
     --framework             Build frameworks after building configurations

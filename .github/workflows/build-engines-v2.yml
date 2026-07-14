@@ -3,7 +3,8 @@ name: Build Engines v2
 # Builds the Graphite-enabled engine artifact set that production consumes
 # (derived from the gs://flutter-graphite-builds manifest):
 #   - Linux job:  Android artifacts.zip / symbols / embedder / AARs
-#   - Mac jobs:   iOS + macOS configs, android gen_snapshot hosts (darwin-x64.zip)
+#   - Mac jobs:   iOS + macOS configs, gen_snapshot hosts (darwin-x64.zip)
+#   - Windows jobs: Windows artifacts.zip
 #   - Frameworks: assembles FlutterMacOS/Flutter xcframeworks + gen_snapshots
 #                 from tarred out-dirs (tar preserves exec bits across jobs)
 #   - Backfill:   stock upstream artifacts that don't need Graphite
@@ -58,6 +59,7 @@ jobs:
     outputs:
       linux_matrix: ${{ steps.m.outputs.linux }}
       mac_matrix: ${{ steps.m.outputs.mac }}
+      windows_matrix: ${{ steps.m.outputs.windows }}
     steps:
       - id: m
         run: |
@@ -65,11 +67,22 @@ jobs:
             # Recovery mode: frameworks pulls artifacts from the given run;
             # optionally build a few missing configs in this run too.
             echo "linux=[]" >> "$GITHUB_OUTPUT"
+            echo "windows=[]" >> "$GITHUB_OUTPUT"
             echo "mac=$(echo '${{ github.event.inputs.recovery_build_configs }}' | tr -d '\n ')" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           if [ "${{ github.event.inputs.scope }}" = "full" ]; then
             linux='[
+              {"config":"ci/linux_debug_arm64","platform":"linux"},
+              {"config":"ci/linux_profile_arm64","platform":"linux"},
+              {"config":"ci/linux_release_arm64","platform":"linux"},
+              {"config":"ci/host_debug","platform":"linux"},
+              {"config":"ci/host_debug_clang_tidy","platform":"linux"},
+              {"config":"ci/host_debug_desktop","platform":"linux"},
+              {"config":"ci/host_debug_unopt","platform":"linux"},
+              {"config":"ci/host_release","platform":"linux"},
+              {"config":"ci/host_release_desktop","platform":"linux"},
+              {"config":"ci/host_release_licenses","platform":"linux"},
               {"config":"ci/android_debug","platform":"androidlinux"},
               {"config":"ci/android_debug_arm64","platform":"androidlinux"},
               {"config":"ci/android_debug_x64","platform":"androidlinux"},
@@ -108,14 +121,15 @@ jobs:
               {"config":"ci/host_profile_gen_snapshot","platform":"mac","save_out":true},
               {"config":"ci/host_release","platform":"mac","save_out":false},
               {"config":"ci/host_release_framework","platform":"mac","save_out":true},
-              {"config":"ci/host_release_gen_snapshot","platform":"mac","save_out":true},
-              {"config":"android_debug_arm64","platform":"android","save_out":false},
-              {"config":"ci/android_profile","platform":"android","save_out":false},
-              {"config":"ci/android_profile_arm64","platform":"android","save_out":false},
-              {"config":"ci/android_profile_x64","platform":"android","save_out":false},
-              {"config":"ci/android_release","platform":"android","save_out":false},
-              {"config":"ci/android_release_arm64","platform":"android","save_out":false},
-              {"config":"ci/android_release_x64","platform":"android","save_out":false}
+              {"config":"ci/host_release_gen_snapshot","platform":"mac","save_out":true}
+            ]'
+            windows='[
+              {"config":"ci/host_debug","platform":"windows"},
+              {"config":"ci/host_profile","platform":"windows"},
+              {"config":"ci/host_release","platform":"windows"},
+              {"config":"ci/host_debug_arm64","platform":"windows"},
+              {"config":"ci/host_profile_arm64","platform":"windows"},
+              {"config":"ci/host_release_arm64","platform":"windows"}
             ]'
           else
             linux='[]'
@@ -124,9 +138,11 @@ jobs:
               {"config":"ci/ios_debug_sim","platform":"ios","save_out":true},
               {"config":"ci/ios_debug_sim_arm64","platform":"ios","save_out":true}
             ]'
+            windows='[]'
           fi
           echo "linux=$(echo $linux | tr -d '\n ')" >> "$GITHUB_OUTPUT"
           echo "mac=$(echo $mac | tr -d '\n ')" >> "$GITHUB_OUTPUT"
+          echo "windows=$(echo $windows | tr -d '\n ')" >> "$GITHUB_OUTPUT"
 
   build-linux:
     needs: plan
@@ -338,6 +354,41 @@ jobs:
           gcp_bucket: ${{ github.event.inputs.gcp_bucket }}
           gcp_sa_key: ${{ secrets.GCP_SA_KEY }}
 
+  build-windows:
+    needs: plan
+    if: needs.plan.outputs.windows_matrix != '[]'
+    runs-on: windows-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.windows_matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare flock
+        uses: ./.github/actions/prepare-flock
+        with:
+          flutter_tag: ${{ github.event.inputs.flutter_tag }}
+          platform: ${{ matrix.platform }}
+          graphite_ref: ${{ github.event.inputs.graphite_ref }}
+          apply_skia_patch: ${{ github.event.inputs.apply_skia_patch }}
+
+      - name: Build ${{ matrix.config }}
+        shell: bash
+        run: |
+          chmod +x local-build-tools/build_engine.sh
+          ./local-build-tools/build_engine.sh build --platform "${{ matrix.platform }}" --config "${{ matrix.config }}"
+
+      - name: Publish outputs
+        uses: ./.github/actions/publish-outputs
+        with:
+          config: ${{ matrix.config }}
+          upload_gcs: ${{ github.event.inputs.upload_gcs }}
+          gcp_bucket: ${{ github.event.inputs.gcp_bucket }}
+          gcp_sa_key: ${{ secrets.GCP_SA_KEY }}
+
   # Stock upstream artifacts that don't contain the engine renderer and can be
   # mirrored as-is from Google's bucket (same engine hash).
   backfill:
@@ -366,14 +417,10 @@ jobs:
             "$INFRA/flutter_gpu.zip"
             "$INFRA/flutter-web-sdk.zip"
             "$INFRA/android-javadoc.zip"
-            "$INFRA/android-x86/artifacts.zip"
-            "$INFRA/android-x64/artifacts.zip"
             "$INFRA/dart-sdk-darwin-arm64.zip"
             "$INFRA/dart-sdk-darwin-x64.zip"
             "$INFRA/dart-sdk-linux-x64.zip"
             "$INFRA/dart-sdk-windows-x64.zip"
-            "$INFRA/linux-x64/artifacts.zip"
-            "$INFRA/linux-x64/font-subset.zip"
           )
           # Shared (hash-less) objects referenced via version files in the
           # flutter checkout. Re-mirroring them every release resets their age so
@@ -410,7 +457,7 @@ jobs:
   # gated on every build/framework/backfill job succeeding — means a partially
   # failed run is invisible to consumers and simply retries next time.
   release:
-    needs: [build-linux, build-mac, frameworks, backfill]
+    needs: [build-linux, build-mac, build-windows, frameworks, backfill]
     # Runs for a full build, or in recovery mode (frameworks_from_run) where the
     # build jobs were intentionally skipped because their outputs already shipped.
     if: >-
@@ -420,6 +467,7 @@ jobs:
           && needs.frameworks.result == 'success'
           && needs.build-linux.result != 'failure'
           && needs.build-mac.result != 'failure'
+          && needs.build-windows.result != 'failure'
           && needs.backfill.result != 'failure' }}
     runs-on: ubuntu-latest
     steps:
@@ -452,7 +500,7 @@ jobs:
     # Production runs are usually dispatched by the daily checker, whose actor
     # is the Actions bot — GitHub emails nobody when they fail. Surface the
     # failure as an issue so it can't sit unnoticed until the release is needed.
-    needs: [plan, build-linux, build-mac, frameworks, backfill, release]
+    needs: [plan, build-linux, build-mac, buid-windows, frameworks, backfill, release]
     if: >-
       ${{ !cancelled()
           && github.event.inputs.upload_gcs == 'true'
