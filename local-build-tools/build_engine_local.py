@@ -289,13 +289,25 @@ class FlutterEngineBuilder:
             ]
             
             self.run_command(cmd, cwd=cwd)
-            
-            # Build with ninja
+
+            # Build the default target with ninja. `et build` only builds the
+            # target list from the upstream builder JSON, and on macOS that is
+            # narrower than what our packaging needs (e.g. libflutter.so for
+            # the android AOT configs), so this second pass is load-bearing.
+            #
+            # Use the ninja binary pinned by the checkout's DEPS, the same one
+            # `et` runs, rather than whatever `ninja` is on PATH. depot_tools'
+            # wrapper on PATH needs depot_tools to be bootstrapped (hermetic
+            # python), which CI deliberately never does (DEPOT_TOOLS_UPDATE=0).
+            ninja_bin = self.flock_dir / "third_party" / "ninja" / "ninja"
+            if not ninja_bin.is_file():
+                self.log(f"Bundled ninja not found at {ninja_bin}; run gclient sync first", "ERROR")
+                return False
             cmd = [
-                "ninja",
+                str(ninja_bin),
                 "-C", f"out/{config.config_name}"
             ]
-            
+
             self.run_command(cmd, cwd=cwd)
             self.log(f"Successfully built {config.config_name}")
             
