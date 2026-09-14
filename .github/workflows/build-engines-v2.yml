@@ -119,10 +119,16 @@ jobs:
             ]'
           else
             linux='[]'
+            # create_ios_framework.py also assembles the extension-safe
+            # xcframework from <config>_extension_safe out-dirs, so the smoke
+            # set must build those too or the frameworks job cannot pass.
             mac='[
               {"config":"ci/ios_debug","platform":"ios","save_out":true},
               {"config":"ci/ios_debug_sim","platform":"ios","save_out":true},
-              {"config":"ci/ios_debug_sim_arm64","platform":"ios","save_out":true}
+              {"config":"ci/ios_debug_sim_arm64","platform":"ios","save_out":true},
+              {"config":"ci/ios_debug_extension_safe","platform":"ios","save_out":true},
+              {"config":"ci/ios_debug_sim_extension_safe","platform":"ios","save_out":true},
+              {"config":"ci/ios_debug_sim_arm64_extension_safe","platform":"ios","save_out":true}
             ]'
           fi
           echo "linux=$(echo $linux | tr -d '\n ')" >> "$GITHUB_OUTPUT"
