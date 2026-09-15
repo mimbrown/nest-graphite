@@ -5,7 +5,7 @@ inputs:
     description: "Flutter tag/branch to build"
     required: true
   platform:
-    description: "Platform group: mac | ios | android | androidlinux | linux | web"
+    description: "Platform group: mac | ios | android | androidlinux | androidwindows | linux | windows | web"
     required: true
   graphite_ref:
     description: "silnrsi/graphite ref"
@@ -74,13 +74,13 @@ runs:
           # which is gated behind download_linux_deps.
           androidlinux)
             LINUX_DEPS=True; ANDROID_DEPS=True; ESBUILD=False; EMSDK_LINE="" ;;
-          android)
+          android|androidwindows)
             LINUX_DEPS=False; ANDROID_DEPS=True; ESBUILD=False; EMSDK_LINE="" ;;
           linux)
             LINUX_DEPS=True; ANDROID_DEPS=False; ESBUILD=False; EMSDK_LINE="" ;;
           web)
             LINUX_DEPS=True; ANDROID_DEPS=False; ESBUILD=True; EMSDK_LINE='"download_emsdk": True,' ;;
-          mac|ios)
+          mac|ios|windows)
             LINUX_DEPS=False; ANDROID_DEPS=False; ESBUILD=False; EMSDK_LINE="" ;;
           *)
             echo "Unknown platform: ${{ inputs.platform }}"; exit 1 ;;
