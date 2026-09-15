@@ -18,21 +18,26 @@ Everything runs on free GitHub Actions runners in this public repo:
    `gs://flutter-graphite-builds` doesn't have an `engine_stamp.json` for that
    hash, it dispatches a full build.
 2. **`build-engines-v2.yml`** — the whole pipeline:
-   - **build-linux / build-mac** — matrix over all engine configs (Android on
-     ubuntu, macOS/iOS on macos runners, including the iOS `extension_safe`
-     variants required by framework assembly). Each job checks out Flutter at
-     the release tag, does a slim `gclient sync`, injects Graphite (see
-     [`patch-flutter/`](patch-flutter/README.md)), builds, and verifies
-     graphite symbols are present.
-   - **frameworks** — restores the mac out-dirs and assembles
-     `Flutter.xcframework`, `FlutterMacOS.framework`, gen_snapshots, etc.
-     A hard assert checks every expected artifact exists before anything is
-     published (the upstream framework scripts swallow errors).
-   - **backfill** — copies the artifacts we don't rebuild (dart-sdk,
-     sky_engine, patched SDKs, web SDK, windows/linux host artifacts, fonts,
-     gradle wrapper…) from the official `flutter_infra_release` bucket at the
-     same engine hash. Building at the release tag keeps hashes aligned, which
-     is what makes this backfill valid.
+   - **build-linux / build-mac** — matrix over the mobile engine configs
+     (Android on ubuntu, iOS on macos runners, including the iOS
+     `extension_safe` variants required by framework assembly). Each job
+     checks out Flutter at the release tag, does a slim `gclient sync`,
+     injects Graphite (see [`patch-flutter/`](patch-flutter/README.md)),
+     builds, and verifies graphite symbols are present.
+   - **frameworks** — restores the iOS out-dirs and assembles
+     `Flutter.xcframework`. A hard assert checks every expected artifact
+     exists before anything is published (the upstream framework scripts
+     swallow errors).
+   - **backfill** — copies the artifacts we don't rebuild from the official
+     `flutter_infra_release` bucket at the same engine hash: dart-sdk,
+     sky_engine, patched SDKs, web SDK, host tools and `gen_snapshot` for
+     every host OS (macOS, Linux, Windows), the macOS desktop embedder,
+     fonts, gradle wrapper… Building at the release tag keeps hashes
+     aligned, which is what makes this backfill valid.
+
+Scope: Graphite is built into the **Android and iOS** engines only. Desktop
+targets (macOS, Linux, Windows) are served stock, so apps build and run on
+every host but Graphite shaping is only active on mobile.
    - **release** — uploads everything to the bucket and publishes
      `engine_stamp.json` **last**. The flutter tool treats the stamp as "this
      release exists", so a partial upload is never consumable.

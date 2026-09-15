@@ -3,10 +3,12 @@ name: Build Engines v2
 # Builds the Graphite-enabled engine artifact set that production consumes
 # (derived from the gs://flutter-graphite-builds manifest):
 #   - Linux job:  Android artifacts.zip / symbols / embedder / AARs
-#   - Mac jobs:   iOS + macOS configs
-#   - Frameworks: assembles FlutterMacOS/Flutter xcframeworks + gen_snapshots
-#                 from tarred out-dirs (tar preserves exec bits across jobs)
-#   - Backfill:   stock upstream artifacts that don't need Graphite
+#   - Mac jobs:   iOS configs
+#   - Frameworks: assembles Flutter.xcframework from tarred out-dirs
+#                 (tar preserves exec bits across jobs)
+#   - Backfill:   stock upstream artifacts that don't need Graphite: SDKs,
+#                 host tools, gen_snapshot for every host, and the desktop
+#                 embedders (desktop apps are out of scope for Graphite)
 #
 # Each job prepares its own checkout (slim gclient sync is ~2 min on these
 # runners) — no giant prepared-tree artifact handoffs.
@@ -90,25 +92,7 @@ jobs:
               {"config":"ci/ios_debug_sim_extension_safe","platform":"ios","save_out":true},
               {"config":"ci/ios_debug_sim_arm64_extension_safe","platform":"ios","save_out":true},
               {"config":"ci/ios_profile_extension_safe","platform":"ios","save_out":true},
-              {"config":"ci/ios_release_extension_safe","platform":"ios","save_out":true},
-              {"config":"ci/mac_debug_arm64","platform":"mac","save_out":false},
-              {"config":"ci/mac_debug_framework_arm64","platform":"mac","save_out":true},
-              {"config":"ci/mac_debug_gen_snapshot_arm64","platform":"mac","save_out":true},
-              {"config":"ci/mac_profile_arm64","platform":"mac","save_out":false},
-              {"config":"ci/mac_profile_framework_arm64","platform":"mac","save_out":true},
-              {"config":"ci/mac_profile_gen_snapshot_arm64","platform":"mac","save_out":true},
-              {"config":"ci/mac_release_arm64","platform":"mac","save_out":false},
-              {"config":"ci/mac_release_framework_arm64","platform":"mac","save_out":true},
-              {"config":"ci/mac_release_gen_snapshot_arm64","platform":"mac","save_out":true},
-              {"config":"ci/host_debug","platform":"mac","save_out":false},
-              {"config":"ci/host_debug_framework","platform":"mac","save_out":true},
-              {"config":"ci/host_debug_gen_snapshot","platform":"mac","save_out":true},
-              {"config":"ci/host_profile","platform":"mac","save_out":false},
-              {"config":"ci/host_profile_framework","platform":"mac","save_out":true},
-              {"config":"ci/host_profile_gen_snapshot","platform":"mac","save_out":true},
-              {"config":"ci/host_release","platform":"mac","save_out":false},
-              {"config":"ci/host_release_framework","platform":"mac","save_out":true},
-              {"config":"ci/host_release_gen_snapshot","platform":"mac","save_out":true}
+              {"config":"ci/ios_release_extension_safe","platform":"ios","save_out":true}
             ]'
           else
             linux='[]'
@@ -295,14 +279,6 @@ jobs:
               ios/artifacts.zip
               ios-profile/artifacts.zip
               ios-release/artifacts.zip
-              darwin-x64/FlutterMacOS.framework.zip
-              darwin-x64/FlutterEmbedder.framework.zip
-              darwin-x64/framework.zip
-              darwin-x64/gen_snapshot.zip
-              darwin-x64-profile/FlutterMacOS.framework.zip
-              darwin-x64-profile/gen_snapshot.zip
-              darwin-x64-release/FlutterMacOS.framework.zip
-              darwin-x64-release/gen_snapshot.zip
             "
           fi
           missing=0
@@ -396,6 +372,33 @@ jobs:
             "$INFRA/android-arm64-release/darwin-x64.zip"
             "$INFRA/android-x64-profile/darwin-x64.zip"
             "$INFRA/android-x64-release/darwin-x64.zip"
+            # macOS host tools and the macOS desktop embedder. Desktop apps are
+            # out of scope for Graphite (same as Linux/Windows desktop), so the
+            # stock set is mirrored rather than built. This is every darwin-*
+            # path the retired Mac host jobs used to publish that upstream
+            # also ships; the per-arch FlutterMacOS/FlutterEmbedder zips they
+            # wrote under darwin-arm64* are build intermediates the flutter
+            # tool never fetches and upstream does not publish.
+            "$INFRA/darwin-x64/artifacts.zip"
+            "$INFRA/darwin-x64/font-subset.zip"
+            "$INFRA/darwin-x64/impeller_sdk.zip"
+            "$INFRA/darwin-x64/FlutterEmbedder.framework.zip"
+            "$INFRA/darwin-x64/FlutterMacOS.framework.zip"
+            "$INFRA/darwin-x64/framework.zip"
+            "$INFRA/darwin-x64/gen_snapshot.zip"
+            "$INFRA/darwin-x64-profile/artifacts.zip"
+            "$INFRA/darwin-x64-profile/FlutterMacOS.framework.zip"
+            "$INFRA/darwin-x64-profile/framework.zip"
+            "$INFRA/darwin-x64-profile/gen_snapshot.zip"
+            "$INFRA/darwin-x64-release/artifacts.zip"
+            "$INFRA/darwin-x64-release/FlutterMacOS.framework.zip"
+            "$INFRA/darwin-x64-release/framework.zip"
+            "$INFRA/darwin-x64-release/gen_snapshot.zip"
+            "$INFRA/darwin-arm64/artifacts.zip"
+            "$INFRA/darwin-arm64/font-subset.zip"
+            "$INFRA/darwin-arm64/impeller_sdk.zip"
+            "$INFRA/darwin-arm64-profile/artifacts.zip"
+            "$INFRA/darwin-arm64-release/artifacts.zip"
           )
           # Shared (hash-less) objects referenced via version files in the
           # flutter checkout. Re-mirroring them every release resets their age so
@@ -410,13 +413,21 @@ jobs:
             fi
           done
 
+          # Backfill now carries load-bearing files (gen_snapshot for every
+          # host, macOS desktop), so a missing upstream object must fail the
+          # run rather than let the release stamp ship over a hole.
+          missing=0
           for t in "${targets[@]}"; do
             mkdir -p "staging/$(dirname "$t")"
             echo "Fetching $t"
             curl -sfL --retry 3 -o "staging/$t" "https://storage.googleapis.com/$t" \
-              || echo "WARNING: missing upstream $t"
+              || { echo "ERROR: missing upstream $t"; missing=1; }
           done
           find staging -type f | sed 's|^staging/||'
+          if [ "$missing" -ne 0 ]; then
+            echo "One or more stock artifacts are missing upstream — failing backfill."
+            exit 1
+          fi
 
       - name: Publish outputs
         uses: ./.github/actions/publish-outputs

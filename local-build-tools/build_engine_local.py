@@ -361,12 +361,19 @@ class FlutterEngineBuilder:
         Args:
             build_outputs: Dictionary mapping config names to output paths
         """
-        self.log("Creating macOS frameworks...")
-        
         cwd = self.engine_src_dir
-        
+
+        # CI builds only the iOS configs (macOS desktop is mirrored stock by
+        # the backfill job), so the mac out-dirs are normally absent. Only
+        # assemble what is actually on disk instead of logging six failures.
+        present = {name for name in build_outputs if (cwd / "out" / name).is_dir()}
+        if not present:
+            self.log("No macOS out-dirs present; skipping macOS framework assembly")
+            return
+        self.log("Creating macOS frameworks...")
+
         # mac_debug_framework_arm64 framework creation
-        if "ci/mac_debug_framework_arm64" in build_outputs and "ci/host_debug_framework" in build_outputs:
+        if "ci/mac_debug_framework_arm64" in present and "ci/host_debug_framework" in present:
             try:
                 out_dir = "out/debug/framework"
                 cmd = [
@@ -409,7 +416,7 @@ class FlutterEngineBuilder:
                 self.log(f"Framework creation failed: {e}", "ERROR")
 
         # mac_profile_framework_arm64 framework creation
-        if "ci/mac_profile_framework_arm64" in build_outputs and "ci/host_profile_framework" in build_outputs:
+        if "ci/mac_profile_framework_arm64" in present and "ci/host_profile_framework" in present:
             try:
                 out_dir = "out/profile/framework"
                 cmd = [
@@ -435,7 +442,7 @@ class FlutterEngineBuilder:
                 self.log(f"Framework creation failed: {e}", "ERROR")
 
         # mac_release_framework_arm64 framework creation
-        if "ci/mac_release_framework_arm64" in build_outputs and "ci/host_release_framework" in build_outputs:
+        if "ci/mac_release_framework_arm64" in present and "ci/host_release_framework" in present:
             try:
                 out_dir = "out/release/framework"
                 cmd = [
@@ -461,7 +468,7 @@ class FlutterEngineBuilder:
                 self.log(f"Framework creation failed: {e}", "ERROR")
 
         # mac_debug_gen_snapshot_arm64 framework creation
-        if "ci/mac_debug_gen_snapshot_arm64" in build_outputs and "ci/host_debug_gen_snapshot" in build_outputs:
+        if "ci/mac_debug_gen_snapshot_arm64" in present and "ci/host_debug_gen_snapshot" in present:
             try:
                 out_dir = "out/debug/snapshot"
                 cmd = [
@@ -486,7 +493,7 @@ class FlutterEngineBuilder:
                 self.log(f"Framework creation failed: {e}", "ERROR")
 
         # mac_profile_gen_snapshot_arm64 framework creation
-        if "ci/mac_profile_gen_snapshot_arm64" in build_outputs and "ci/host_profile_gen_snapshot" in build_outputs:
+        if "ci/mac_profile_gen_snapshot_arm64" in present and "ci/host_profile_gen_snapshot" in present:
             try:
                 out_dir = "out/profile/snapshot"
                 cmd = [
@@ -511,7 +518,7 @@ class FlutterEngineBuilder:
                 self.log(f"Framework creation failed: {e}", "ERROR")
 
         # mac_release_gen_snapshot_arm64 framework creation
-        if "ci/mac_release_gen_snapshot_arm64" in build_outputs and "ci/host_release_gen_snapshot" in build_outputs:
+        if "ci/mac_release_gen_snapshot_arm64" in present and "ci/host_release_gen_snapshot" in present:
             try:
                 out_dir = "out/release/snapshot"
                 cmd = [
