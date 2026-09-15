@@ -380,6 +380,19 @@ jobs:
             "$INFRA/dart-sdk-windows-x64.zip"
             "$INFRA/linux-x64/artifacts.zip"
             "$INFRA/linux-x64/font-subset.zip"
+            # Windows hosts building Android: host tools plus the per-config
+            # gen_snapshot.exe. gen_snapshot is the Dart AOT compiler and
+            # links no renderer, so the stock binary is exactly right.
+            "$INFRA/windows-x64/artifacts.zip"
+            "$INFRA/windows-x64/font-subset.zip"
+            "$INFRA/windows-arm64/artifacts.zip"
+            "$INFRA/windows-arm64/font-subset.zip"
+            "$INFRA/android-arm-profile/windows-x64.zip"
+            "$INFRA/android-arm-release/windows-x64.zip"
+            "$INFRA/android-arm64-profile/windows-x64.zip"
+            "$INFRA/android-arm64-release/windows-x64.zip"
+            "$INFRA/android-x64-profile/windows-x64.zip"
+            "$INFRA/android-x64-release/windows-x64.zip"
           )
           # Shared (hash-less) objects referenced via version files in the
           # flutter checkout. Re-mirroring them every release resets their age so
