@@ -3,7 +3,7 @@ name: Build Engines v2
 # Builds the Graphite-enabled engine artifact set that production consumes
 # (derived from the gs://flutter-graphite-builds manifest):
 #   - Linux job:  Android artifacts.zip / symbols / embedder / AARs
-#   - Mac jobs:   iOS + macOS configs, android gen_snapshot hosts (darwin-x64.zip)
+#   - Mac jobs:   iOS + macOS configs
 #   - Frameworks: assembles FlutterMacOS/Flutter xcframeworks + gen_snapshots
 #                 from tarred out-dirs (tar preserves exec bits across jobs)
 #   - Backfill:   stock upstream artifacts that don't need Graphite
@@ -108,14 +108,7 @@ jobs:
               {"config":"ci/host_profile_gen_snapshot","platform":"mac","save_out":true},
               {"config":"ci/host_release","platform":"mac","save_out":false},
               {"config":"ci/host_release_framework","platform":"mac","save_out":true},
-              {"config":"ci/host_release_gen_snapshot","platform":"mac","save_out":true},
-              {"config":"android_debug_arm64","platform":"android","save_out":false},
-              {"config":"ci/android_profile","platform":"android","save_out":false},
-              {"config":"ci/android_profile_arm64","platform":"android","save_out":false},
-              {"config":"ci/android_profile_x64","platform":"android","save_out":false},
-              {"config":"ci/android_release","platform":"android","save_out":false},
-              {"config":"ci/android_release_arm64","platform":"android","save_out":false},
-              {"config":"ci/android_release_x64","platform":"android","save_out":false}
+              {"config":"ci/host_release_gen_snapshot","platform":"mac","save_out":true}
             ]'
           else
             linux='[]'
@@ -393,6 +386,16 @@ jobs:
             "$INFRA/android-arm64-release/windows-x64.zip"
             "$INFRA/android-x64-profile/windows-x64.zip"
             "$INFRA/android-x64-release/windows-x64.zip"
+            # Same for macOS hosts. The Linux android jobs already publish
+            # every other file the Mac android jobs produced (artifacts.zip,
+            # symbols.zip, AARs, javadoc, impeller_sdk), so this is the only
+            # thing those seven builds were needed for.
+            "$INFRA/android-arm-profile/darwin-x64.zip"
+            "$INFRA/android-arm-release/darwin-x64.zip"
+            "$INFRA/android-arm64-profile/darwin-x64.zip"
+            "$INFRA/android-arm64-release/darwin-x64.zip"
+            "$INFRA/android-x64-profile/darwin-x64.zip"
+            "$INFRA/android-x64-release/darwin-x64.zip"
           )
           # Shared (hash-less) objects referenced via version files in the
           # flutter checkout. Re-mirroring them every release resets their age so
