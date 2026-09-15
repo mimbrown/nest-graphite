@@ -406,10 +406,17 @@ jobs:
           INTERNAL=flock-shallow/bin/internal
           targets+=("$(cat $INTERNAL/material_fonts.version)")
           targets+=("$(cat $INTERNAL/gradle_wrapper.version)")
+          # Flutter >= 3.47 fetches these from ios-usb-dependencies/arm64_x86_64
+          # (and .../arm64_x86_64/unsigned for `flutter precache` with unsigned
+          # mac binaries); older tools use the bare ios-usb-dependencies/<dep>
+          # layout. Mirror all three so every tag served from this bucket works.
+          USB=flutter_infra_release/ios-usb-dependencies
           for dep in ios-deploy libimobiledevice libimobiledeviceglue libplist libusbmuxd openssl; do
             ver=$(cat "$INTERNAL/$dep.version" 2>/dev/null || true)
             if [ -n "$ver" ]; then
-              targets+=("flutter_infra_release/ios-usb-dependencies/$dep/$ver/$dep.zip")
+              targets+=("$USB/$dep/$ver/$dep.zip")
+              targets+=("$USB/arm64_x86_64/$dep/$ver/$dep.zip")
+              targets+=("$USB/arm64_x86_64/unsigned/$dep/$ver/$dep.zip")
             fi
           done
 
