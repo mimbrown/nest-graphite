@@ -23,7 +23,7 @@ on:
         required: true
         default: '3.44.4'
       scope:
-        description: 'smoke (iOS debug set + frameworks) or full (everything)'
+        description: 'smoke (iOS debug set + frameworks), full (everything), or backfill (re-mirror stock files only, for an already-released tag)'
         required: true
         default: 'smoke'
       apply_skia_patch:
@@ -68,6 +68,14 @@ jobs:
             # optionally build a few missing configs in this run too.
             echo "linux=[]" >> "$GITHUB_OUTPUT"
             echo "mac=$(echo '${{ github.event.inputs.recovery_build_configs }}' | tr -d '\n ')" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ "${{ github.event.inputs.scope }}" = "backfill" ]; then
+            # Stock files only: after the backfill list grows, publish the new
+            # entries for a tag whose Graphite builds (and engine_stamp.json)
+            # already shipped. No builds, so frameworks and release skip.
+            echo "linux=[]" >> "$GITHUB_OUTPUT"
+            echo "mac=[]" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           if [ "${{ github.event.inputs.scope }}" = "full" ]; then
@@ -316,7 +324,7 @@ jobs:
   # Stock upstream artifacts that don't contain the engine renderer and can be
   # mirrored as-is from Google's bucket (same engine hash).
   backfill:
-    if: ${{ github.event.inputs.scope == 'full' }}
+    if: ${{ github.event.inputs.scope == 'full' || github.event.inputs.scope == 'backfill' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -347,8 +355,31 @@ jobs:
             "$INFRA/dart-sdk-darwin-x64.zip"
             "$INFRA/dart-sdk-linux-x64.zip"
             "$INFRA/dart-sdk-windows-x64.zip"
+            "$INFRA/dart-sdk-linux-arm64.zip"
+            "$INFRA/dart-sdk-windows-arm64.zip"
             "$INFRA/linux-x64/artifacts.zip"
             "$INFRA/linux-x64/font-subset.zip"
+            "$INFRA/linux-arm64/artifacts.zip"
+            "$INFRA/linux-arm64/font-subset.zip"
+            # Linux and Windows desktop embedders. Desktop apps are out of
+            # scope for Graphite, but the tool fetches these whenever the
+            # target is a desktop device (including `flutter run` falling back
+            # to the host with no phone attached, and a bare `flutter precache`),
+            # and a 404 there is an opaque failure. Serve them stock, like macOS.
+            "$INFRA/linux-x64-debug/linux-x64-flutter-gtk.zip"
+            "$INFRA/linux-x64-profile/linux-x64-flutter-gtk.zip"
+            "$INFRA/linux-x64-release/linux-x64-flutter-gtk.zip"
+            "$INFRA/linux-arm64-debug/linux-arm64-flutter-gtk.zip"
+            "$INFRA/linux-arm64-profile/linux-arm64-flutter-gtk.zip"
+            "$INFRA/linux-arm64-release/linux-arm64-flutter-gtk.zip"
+            "$INFRA/windows-x64-debug/windows-x64-flutter.zip"
+            "$INFRA/windows-x64/flutter-cpp-client-wrapper.zip"
+            "$INFRA/windows-x64-profile/windows-x64-flutter.zip"
+            "$INFRA/windows-x64-release/windows-x64-flutter.zip"
+            "$INFRA/windows-arm64-debug/windows-arm64-flutter.zip"
+            "$INFRA/windows-arm64/flutter-cpp-client-wrapper.zip"
+            "$INFRA/windows-arm64-profile/windows-arm64-flutter.zip"
+            "$INFRA/windows-arm64-release/windows-arm64-flutter.zip"
             # Windows hosts building Android: host tools plus the per-config
             # gen_snapshot.exe. gen_snapshot is the Dart AOT compiler and
             # links no renderer, so the stock binary is exactly right.
