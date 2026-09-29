@@ -87,6 +87,9 @@ strings ~/fvm/versions/graphite/<version>/bin/cache/artifacts/engine/ios/Flutter
   `gh run rerun <id> --failed`. If frameworks need re-assembly from a previous
   run's artifacts, dispatch with `frameworks_from_run=<run-id>`; add
   `recovery_build_configs=["ci/…"]` to rebuild specific missing configs.
+- **Backfill-only** (the stock-file list grew and an already-released tag
+  needs the new files): `scope=backfill`, `upload_gcs=true`. Re-mirrors the
+  stock files only; no builds, and `engine_stamp.json` is left untouched.
 - **Failure visibility:** production runs (`upload_gcs=true`) open a GitHub
   issue in this repo on failure, since cron-dispatched runs don't email anyone.
 
