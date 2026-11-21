@@ -349,7 +349,6 @@ jobs:
             "$INFRA/flutter_gpu.zip"
             "$INFRA/flutter-web-sdk.zip"
             "$INFRA/android-javadoc.zip"
-            "$INFRA/android-x86/artifacts.zip"
             "$INFRA/android-x64/artifacts.zip"
             "$INFRA/dart-sdk-darwin-arm64.zip"
             "$INFRA/dart-sdk-darwin-x64.zip"
@@ -431,6 +430,12 @@ jobs:
             "$INFRA/darwin-arm64-profile/artifacts.zip"
             "$INFRA/darwin-arm64-release/artifacts.zip"
           )
+          # Flutter 3.50 dropped Android x86: the tool no longer lists
+          # android-x86 in flutter_cache.dart and upstream stopped publishing
+          # it. Mirror it only for tags whose tool still fetches it.
+          if grep -q "'android-x86/artifacts.zip'" flock-shallow/packages/flutter_tools/lib/src/flutter_cache.dart; then
+            targets+=("$INFRA/android-x86/artifacts.zip")
+          fi
           # Shared (hash-less) objects referenced via version files in the
           # flutter checkout. Re-mirroring them every release resets their age so
           # the bucket's lifecycle rule never deletes one still in use.
